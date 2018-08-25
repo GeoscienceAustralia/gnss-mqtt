@@ -1,11 +1,19 @@
-Start the broker:
+In different terminals, run following commands:
 
-`mosquitto`
+1) Start the broker
 
-Start the command line subscriber:
+`$ mosquitto`
 
-`mosquitto_sub -v -t 'test/topic'`
+2) Start the command line subscriber
 
-Publish test message with the command line publisher:
+`$ mosquitto_sub -v -t 'test'`
 
-`mosquitto_pub -t 'test/topic' -m 'helloWorld'`
+3) Publish test message with the command line publisher:
+
+`$ mosquitto_pub -t 'topic' -m 'hello'`
+
+or using hs-mqtt:
+
+`$ ghc gnss.hs`
+
+`$ ./gnss`
