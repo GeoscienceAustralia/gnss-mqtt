@@ -1,20 +1,48 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# Language OverloadedStrings #-}
 module Main where
 
+import BasicPrelude                      hiding (map)
+import Data.Aeson
+import Data.ByteString.Lazy              hiding (ByteString, map)
+import Data.Conduit
+import Data.Conduit.Binary
+import Data.Conduit.List
+import Data.Conduit.Serialization.Binary
+import Data.RTCM3
+import System.IO
+
 import Control.Concurrent
 import Control.Concurrent.STM
-import qualified Network.MQTT as MQTT
+import Control.Monad (unless)
+import Data.ByteString (ByteString)
+import Network.MQTT as MQTT
+
 import qualified Data.ByteString.Char8 as C
 
-topic :: MQTT.Topic
-topic = "test"
+t :: Topic
+t = "topic"
+
+encodeLine :: RTCM3Msg -> ByteString
+encodeLine v = toStrict $ encode v <> "\n"
+
+sink :: MQTT.Config -> Sink ByteString IO ()
+sink mConf = Data.Conduit.List.mapM_ (MQTT.publish mConf MQTT.NoConfirm False t)
 
 main :: IO ()
 main = do
-    cmds <- MQTT.mkCommands
-    pubChan <- newTChanIO
-    let conf = MQTT.defaultConfig cmds pubChan
-    _ <- forkIO $ do
-        MQTT.publish conf MQTT.NoConfirm False topic (C.pack "hello")
-    terminated <- MQTT.run conf
-    print terminated
+  cmds <- mkCommands
+  pub <- newTChanIO
+  let mqtt = defaultConfig cmds pub   
+
+  _ <- forkIO $ do
+    runConduit 
+      $ sourceHandle stdin 
+      .| conduitDecode 
+      .| map encodeLine
+      .| sink mqtt
+
+    disconnect mqtt
+
+  _ <- run mqtt
+  return ()

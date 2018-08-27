@@ -16,4 +16,11 @@ or using hs-mqtt:
 
 `$ ghc gnss.hs`
 
-`$ ./gnss`
+```
+$ curl -f --no-buffer --connect-timeout 10 --silent \
+    -H "Ntrip-Version: Ntrip/1.0" \
+    -H "User-Agent: NTRIP CURL_NTRIP_TEST/0.1" \
+    -u username:password  http://auscors.ga.gov.au:2101/PARK4 \
+    --output /dev/stdout \
+        | ./gnss
+```
