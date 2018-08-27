@@ -24,3 +24,5 @@ $ curl -f --no-buffer --connect-timeout 10 --silent \
     --output /dev/stdout \
         | ./rtcmMqtt
 ```
+
+N.B. rtcmMqtt publishes to a different topic for each message type (1077, 1087, ...) 
