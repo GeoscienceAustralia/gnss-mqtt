@@ -23,6 +23,7 @@ import qualified Data.ByteString.Char8 as C
 t :: Topic
 t = "topic"
 
+-- From rtcm2json
 encodeLine :: RTCM3Msg -> ByteString
 encodeLine v = toStrict $ encode v <> "\n"
 

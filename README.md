@@ -14,7 +14,7 @@ In different terminals, run following commands:
 
 or using hs-mqtt:
 
-`$ ghc gnss.hs`
+`$ ghc rtcmMqtt.hs`
 
 ```
 $ curl -f --no-buffer --connect-timeout 10 --silent \
@@ -22,5 +22,5 @@ $ curl -f --no-buffer --connect-timeout 10 --silent \
     -H "User-Agent: NTRIP CURL_NTRIP_TEST/0.1" \
     -u username:password  http://auscors.ga.gov.au:2101/PARK4 \
     --output /dev/stdout \
-        | ./gnss
+        | ./rtcmMqtt
 ```
