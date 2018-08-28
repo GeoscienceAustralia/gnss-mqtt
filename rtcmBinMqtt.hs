@@ -13,11 +13,13 @@ module Main where
 import BasicPrelude hiding (map)
 import Data.Aeson
 import Data.ByteString.Lazy hiding (ByteString, map)
+import Data.ByteString hiding (map)
 import Data.Conduit
 import Data.Conduit.Binary
 import Data.Conduit.List
 import Data.Conduit.Serialization.Binary
 import Data.RTCM3
+import Data.Binary as Binary
 import System.IO
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -25,7 +27,6 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.Text hiding (map)
 import Network.MQTT as MQTT
-import qualified Data.ByteString.Char8 as C
 import GHC.Generics
 
 -- ahhhhhh!
@@ -59,11 +60,11 @@ instance Constructor c => HasConstructor (C1 c f) where
 --msg _ = Nothing
 
 encodeLine :: RTCM3Msg -> (Topic, ByteString)
-encodeLine message = (msgTopic, msgJson)
+encodeLine message = (msgTopic, msg)
   where
-    msgTopic = toTopic $ MqttText $ Data.Text.pack msgNumber -- assumes first 8 characters of constructor name are always RTCM3Msg
+    msgTopic = toTopic $ MqttText $ Data.Text.pack msgNumber
     msgNumber = "rtcm/" <> (BasicPrelude.drop 8 $ constrName message)
-    msgJson = toStrict $ encode message <> "\n"
+    msg = toStrict $ Binary.encode message
 
 sink :: MQTT.Config -> Sink (Topic, ByteString) IO ()
 sink mConf = Data.Conduit.List.mapM_ $ uncurry (MQTT.publish mConf MQTT.NoConfirm False)
