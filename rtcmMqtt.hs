@@ -62,7 +62,7 @@ encodeLine :: RTCM3Msg -> (Topic, ByteString)
 encodeLine message = (msgTopic, msgJson)
   where
     msgTopic = toTopic $ MqttText $ Data.Text.pack msgNumber -- assumes first 8 characters of constructor name are always RTCM3Msg
-    msgNumber = "rtcm/" <> (BasicPrelude.drop 8 $ constrName message)
+    msgNumber = "rtcm3/" <> (BasicPrelude.drop 8 $ constrName message)
     msgJson = toStrict $ encode message <> "\n"
 
 sink :: MQTT.Config -> Sink (Topic, ByteString) IO ()
