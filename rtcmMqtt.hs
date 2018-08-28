@@ -47,7 +47,7 @@ instance (HasConstructor x, HasConstructor y) => HasConstructor (x :+: y) where
   genericConstrName (R1 r) = genericConstrName r
 
 instance Constructor c => HasConstructor (C1 c f) where
-  genericConstrName x = conName x
+  genericConstrName = conName
 
 -- Might submit an issue against Data.RTCM3 to see if they are interested in implementing something like the following
 -- This would mean we wouldn't need to use constrName to get the message number
@@ -59,21 +59,18 @@ instance Constructor c => HasConstructor (C1 c f) where
 --msg _ = Nothing
 
 encodeLine :: RTCM3Msg -> (Topic, ByteString)
-encodeLine m = do
-    let a = toStrict $ encode m <> "\n"
-    let t = toTopic $ MqttText $ Data.Text.pack $ BasicPrelude.drop 8 $ constrName m -- assumes first 8 characters of constructor name are always RTCM3Msg
-    (t, a)
+encodeLine message = (msgTopic, msgJson)
+  where
+    msgTopic = toTopic $ MqttText $ Data.Text.pack msgNumber -- assumes first 8 characters of constructor name are always RTCM3Msg
+    msgNumber = BasicPrelude.drop 8 $ constrName message
+    msgJson = toStrict $ encode message <> "\n"
 
 sink :: MQTT.Config -> Sink (Topic, ByteString) IO ()
-sink mConf = do
-  Data.Conduit.List.mapM_ $ \(mTopic, mMessage) -> do
-    MQTT.publish mConf MQTT.NoConfirm False mTopic mMessage
+sink mConf = Data.Conduit.List.mapM_ $ uncurry (MQTT.publish mConf MQTT.NoConfirm False)
 
 main :: IO ()
 main = do
-  cmds <- mkCommands
-  pub <- newTChanIO
-  let mqtt = defaultConfig cmds pub   
+  mqtt <- defaultConfig <$> mkCommands <*> newTChanIO
 
   _ <- forkIO $ do
     runConduit 
