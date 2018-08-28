@@ -9,6 +9,7 @@ in
 pkgs.stdenv.mkDerivation {
   name = "testing";
   buildInputs = with pkgs; [
+    hlint
     mosquitto
     ghc
   ];
