@@ -25,4 +25,4 @@ $ curl -f --no-buffer --connect-timeout 10 --silent \
         | ./rtcmMqtt
 ```
 
-N.B. rtcmMqtt publishes to a different topic for each message type (1077, 1087, ...) 
+N.B. rtcmMqtt publishes to a different topic for each message type (rtcm3/1077, rtcm3/1087, ...) - subscribe to all topics using `rtcm3/#`
