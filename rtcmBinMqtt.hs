@@ -7,12 +7,14 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-} 
 
 module Main where
 
 import BasicPrelude hiding (map)
 import Data.Aeson
-import Data.ByteString.Lazy hiding (ByteString, map)
+import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString hiding (map)
 import Data.Conduit
 import Data.Conduit.Binary
@@ -24,21 +26,22 @@ import System.IO
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad (unless)
-import Data.ByteString (ByteString)
 import Data.Text hiding (map)
 import Network.MQTT as MQTT
 import GHC.Generics
+import Control.Arrow
+import Control.Monad.Trans
 
 -- ahhhhhh!
 -- This whole block came from https://stackoverflow.com/questions/48179380/getting-the-data-constructor-name-as-a-string-using-ghc-generics
 -- Should probably hide all this Generics garbage in another file
 deriving instance Generic RTCM3Msg
 
-constrName :: (HasConstructor (Rep a), Generic a) => a -> String
+constrName :: (HasConstructor (Rep a), Generic a) => a -> Text
 constrName = genericConstrName . from
 
 class HasConstructor (f :: * -> *) where
-  genericConstrName :: f x -> String
+  genericConstrName :: f x -> Text
 
 instance HasConstructor f => HasConstructor (D1 c f) where
   genericConstrName (M1 x) = genericConstrName x
@@ -48,7 +51,7 @@ instance (HasConstructor x, HasConstructor y) => HasConstructor (x :+: y) where
   genericConstrName (R1 r) = genericConstrName r
 
 instance Constructor c => HasConstructor (C1 c f) where
-  genericConstrName = conName
+  genericConstrName = Data.Text.pack . conName
 
 -- Might submit an issue against Data.RTCM3 to see if they are interested in implementing something like the following
 -- This would mean we wouldn't need to use constrName to get the message number
@@ -59,15 +62,17 @@ instance Constructor c => HasConstructor (C1 c f) where
 -- ... 
 --msg _ = Nothing
 
-encodeLine :: RTCM3Msg -> (Topic, ByteString)
-encodeLine message = (msgTopic, msg)
-  where
-    msgTopic = toTopic $ MqttText $ Data.Text.pack msgNumber
-    msgNumber = "rtcm3/" <> (BasicPrelude.drop 8 $ constrName message)
-    msg = toStrict $ Binary.encode message
+decodeMsg :: ByteString -> RTCM3Msg
+decodeMsg = Binary.decode . Lazy.fromStrict
 
-sink :: MQTT.Config -> Sink (Topic, ByteString) IO ()
-sink mConf = Data.Conduit.List.mapM_ $ uncurry (MQTT.publish mConf MQTT.NoConfirm False)
+msgToTopic :: RTCM3Msg -> Topic
+msgToTopic message = msgTopic
+  where
+    msgTopic = toTopic $ MqttText $ "rtcm3/" <> msgNumber
+    msgNumber = Data.Text.drop 8 $ constrName message
+
+publishing :: MQTT.Config -> ConduitT (Topic, ByteString) Void IO ()
+publishing mConf = Data.Conduit.List.mapM_ $ uncurry (MQTT.publish mConf MQTT.NoConfirm False)
 
 main :: IO ()
 main = do
@@ -76,9 +81,10 @@ main = do
   _ <- forkIO $ do
     runConduit 
       $ sourceHandle stdin 
-      .| conduitDecode 
-      .| map encodeLine
-      .| sink mqtt
+      .| map (\message -> (msgToTopic . decodeMsg $ message, message))
+      -- .| map (\message -> (message, message))
+      -- .| map (first (msgToTopic decodeMsg))
+      .| publishing mqtt
 
     disconnect mqtt
 
