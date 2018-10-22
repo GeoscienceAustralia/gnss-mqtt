@@ -81,6 +81,7 @@ main = do
   _ <- forkIO $ do
     runConduit 
       $ sourceHandle stdin 
+      .| conduitDecode
       .| map (\message -> (msgToTopic . decodeMsg $ message, message))
       -- .| map (\message -> (message, message))
       -- .| map (first (msgToTopic decodeMsg))
