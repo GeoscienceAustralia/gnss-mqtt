@@ -15,7 +15,7 @@ func main() {
     source := flag.String("caster", "http://one.auscors.ga.gov.au:2101/ALIC7", "NTRIP caster mountpoint to stream from")
     username := flag.String("username", "", "NTRIP username")
     password := flag.String("password", "", "NTRIP password")
-    timeout := flag.Duration("timeout", 2, "NTRIP reconnect timeout")
+    timeout := flag.Duration("timeout", 2 * time.Second, "NTRIP reconnect timeout")
     flag.Parse()
 
     opts := mqtt.NewClientOptions()
