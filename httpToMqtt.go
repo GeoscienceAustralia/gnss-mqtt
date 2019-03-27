@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 	"log"
@@ -19,6 +20,13 @@ func main() {
 	go Watcher()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			j, _ := json.Marshal(mounts)
+			fmt.Fprintf(w, string(j))
+			w.(http.Flusher).Flush()
+			return
+		}
+
 		// Need separate clients otherwise multiple the latest subscription to a topic will be the only one which receives messages for that topic
 		opts := mqtt.NewClientOptions()
 		opts.AddBroker("tcp://35.189.48.59:1883")
