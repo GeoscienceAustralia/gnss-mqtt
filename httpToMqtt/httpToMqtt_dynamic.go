@@ -17,7 +17,7 @@ var (
 )
 
 func main() {
-	go Watcher()
+	go watcher()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -73,7 +73,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":2101", nil))
 }
 
-func Watcher() {
+func watcher() {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker("tcp://35.189.48.59:1883")
 	mqttClient := mqtt.NewClient(opts)
