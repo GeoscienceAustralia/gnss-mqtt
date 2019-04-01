@@ -27,21 +27,21 @@ type SourceInformation struct {
 	NavSystem string
 	Network string
 	CountryCode string
-	Latitude float64
-	Longitude float64
-	NMEA bool
-	Solution bool
+	Latitude string
+	Longitude string
+	NMEA string
+	Solution string
 	Generator string
 	Compression string
 	Authentication string
-	Fee bool
-	Bitrate int
+	Fee string
+	Bitrate string
 	Misc string
 }
 
 // NTRIP Sourcetable entry format
 func (mount *Mount) String() string {
-	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%f;%f;%t;%t;%s;%s;%s;%t;%v;%s",
+	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s",
 		mount.Name, mount.SourceInformation.Identifier, mount.SourceInformation.Format,
 		mount.SourceInformation.FormatDetails, mount.SourceInformation.Carrier,
 		mount.SourceInformation.NavSystem, mount.SourceInformation.Network,
@@ -53,6 +53,7 @@ func (mount *Mount) String() string {
 }
 
 var ( // TODO: Define mounts from config
+	broker = "tcp://35.189.48.59:1883"
 	mounts = map[string]*Mount{
 		"SYMY": &Mount{"SYMY", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
 		"TEST1": &Mount{"TEST1", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
@@ -62,14 +63,14 @@ var ( // TODO: Define mounts from config
 )
 
 func main() {
-	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker("tcp://35.189.48.59:1883"))
+	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
 	defer mqttClient.Disconnect(0)
 
-	for _, mount := range mounts { // Construct these from new mounts added to config
-		go func(mount *Mount) {
+	for _, mount := range mounts { // Create these subscriptions on initialization of / changes to config
+		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure
 			token := mqttClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
@@ -92,7 +93,7 @@ func main() {
 		}
 
 		switch r.Method {
-		case http.MethodGet:
+		case http.MethodGet: // Create MQTT connection on behalf of the client and subscribe to Topic of Mount.Name 
 			mount, exists := mounts[r.URL.Path[1:]]
 			if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
 				w.WriteHeader(http.StatusNotFound)
@@ -101,7 +102,7 @@ func main() {
 
 			w.(http.Flusher).Flush() // Return 200
 
-			subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker("tcp://35.189.48.59:1883"))
+			subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 			if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 				panic(token.Error())
 			}
@@ -114,13 +115,13 @@ func main() {
 				panic(token.Error())
 			}
 
-			for {
+			for { // TODO: Implement timeout
 				fmt.Fprintf(w, "%s\r\n", <-data)
 				w.(http.Flusher).Flush()
 			}
 
-		case http.MethodPost:
-			pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker("tcp://35.189.48.59:1883"))
+		case http.MethodPost: // Could currently have multiple sources POSTing to a topic
+			pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 			if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 				panic(token.Error())
 			}
