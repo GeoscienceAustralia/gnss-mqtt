@@ -83,6 +83,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		if r.URL.Path == "/" { // Return sourcetable
+			fmt.Fprintf(w, "CAS;go-ntrip.geops.team;2101;Go NTRIP to MQTT Proxy;GA;0;AUS;0;0\r\n")
 			for _, mount := range mounts {
 				if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
 					fmt.Fprintf(w, "%s\r\n", mount)
