@@ -10,12 +10,6 @@ variable "workstation-external-cidr" {
   description = "The CIDR of the workstation to give access to EKS Cluster"
 }
 
-variable "aws-region" {
-  default     = "ap-southeast-2"
-  type        = "string"
-  description = "The AWS Region to deploy EKS"
-}
-
 variable "k8s-version" {
   default     = "1.11"
   type        = "string"
@@ -51,3 +45,9 @@ variable "min-size" {
   type        = "string"
   description = "Autoscaling Minimum node capacity"
 }
+
+variable "state_bucket" {}
+
+variable "state_table" {}
+
+variable "region" {}

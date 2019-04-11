@@ -1,7 +1,7 @@
-provider "aws" {
-  region = "${var.aws-region}"
-}
+variable "region" {}
 
-data "aws_region" "current" {}
+provider "aws" {
+  region = "${var.region}"
+}
 
 data "aws_availability_zones" "available" {}

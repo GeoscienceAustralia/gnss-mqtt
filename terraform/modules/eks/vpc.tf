@@ -1,6 +1,5 @@
 variable "cluster-name" {}
 
-variable "aws-region" {}
 variable "vpc-subnet-cidr" {}
 
 resource "aws_vpc" "eks" {

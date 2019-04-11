@@ -13,21 +13,18 @@
 ## Terraform
 
 ```
-terraform init
-terraform plan
-terraform apply
+./deploy-terraform.sh
 ```
 
-## Setup kubectl
+## Configure kubectl
 
-Setup your `KUBECONFIG`
+Set `$KUBECONFIG` as derived from terraform
 
 ```
-terraform output kubeconfig > ~/.kube/eks-config
-export KUBECONFIG=~/.kube/eks-config
+source init-kubeconfig.sh
 ```
 
-## Authorize worker nodes
+### Authorize worker nodes
 
 Get the config from terraform output, and save it to a yaml file:
 
@@ -41,7 +38,7 @@ Apply the config map to EKS:
 kubectl apply -f config-map-aws-auth.yaml
 ```
 
-You can verify the worker nodes are joining the cluster
+You can verify the worker nodes have joined the cluster
 
 ```
 kubectl get nodes --watch
