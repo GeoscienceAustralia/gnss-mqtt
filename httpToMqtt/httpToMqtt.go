@@ -1,4 +1,4 @@
-// Extremely naive implementation of a "NTRIP" to MQTT proxy
+// Naive implementation of a "NTRIP" to MQTT proxy
 package main
 
 import (
@@ -11,6 +11,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Caster contains global configuration for handling connections and constructing sourcetable 
 type Caster struct {
 	Port       string
 	Hostname   string // TODO: Lookup?
@@ -32,6 +33,7 @@ func (caster *Caster) String() string {
 		caster.Hostname, caster.Port, caster.Identifier, caster.Operator, caster.Country)
 }
 
+// GetSourcetable serves caster and mount information in NTRIP Sourcetable format
 func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\r\n", caster)
 	for _, mount := range caster.Mounts {
@@ -42,7 +44,9 @@ func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 	w.(http.Flusher).Flush()
 }
 
-func (caster *Caster) GetMountpoint(w http.ResponseWriter, r *http.Request) {
+// GetMount handles GET requests for Mounts, establishing an MQTT client and
+// subscription for each request and streaming the data back to the client
+func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	mount, exists := caster.Mounts[r.URL.Path[1:]]
 	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
 		w.WriteHeader(http.StatusNotFound)
@@ -72,7 +76,9 @@ func (caster *Caster) GetMountpoint(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (caster *Caster) PostMountpoint(w http.ResponseWriter, r *http.Request) {
+// PostMount handles POST requests to a Mount, parsing the stream as RTCM and
+// forwarding to MQTT broker
+func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
@@ -92,8 +98,9 @@ func (caster *Caster) PostMountpoint(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(err)
 }
 
-// TODO: Clients subscribe to Mount so each client doesn't need a MQTT connection - maybe not necessary
-// TODO: Handle concurrent writes to Mount using a lock
+// Mount represents a NTRIP mountpoint which proxies through to an MQTT topic
+// TODO: Clients could subscribe to a Mount so each client doesn't need a MQTT connection - less load on MQTT broker, but maybe not necessary
+// TODO: Handle concurrent writes to Mount using a lock, concurrent writes to LastMessage could break
 type Mount struct {
 	Name           string
 	Identifier     string // meta
@@ -124,7 +131,7 @@ func (mount *Mount) String() string {
 		mount.Generator, mount.Misc)
 }
 
-var ( // TODO: Define from config
+var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
 	broker = "tcp://localhost:1883"
 	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
 		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
@@ -143,8 +150,10 @@ func main() {
 		panic(token.Error())
 	}
 	defer mqttClient.Disconnect(0)
+
+	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
-		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure
+		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
 			token := mqttClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
@@ -156,8 +165,8 @@ func main() {
 
 	httpMux := mux.NewRouter()
 	httpMux.HandleFunc("/", caster.GetSourcetable).Methods("GET")
-	httpMux.HandleFunc("/{mountpoint}", caster.GetMountpoint).Methods("GET")
-	httpMux.HandleFunc("/{mountpoint}", caster.PostMountpoint).Methods("POST")
+	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(":" + caster.Port, httpMux))
 }
