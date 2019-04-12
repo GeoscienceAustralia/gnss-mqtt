@@ -2,76 +2,150 @@
 package main
 
 import (
-	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	"log"
-	"net/http"
+	"fmt"
 	"time"
+	"net/http"
+	"github.com/gorilla/mux"
+	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// TODO: Clients subscribe to Mount so each client doesn't need a MQTT connection
-type Mount struct {
-	Name string
-	// Used to decide whether or not an MQTT stream is still "active"
-	LastMessage       time.Time
-	SourceInformation SourceInformation
+type Caster struct {
+	Port       string
+	Hostname   string // TODO: Lookup?
+	Identifier string
+	Operator   string
+//	NMEA       bool
+	Country    string
+//	Latitude   float64
+//	Longitude  float64
+//	Fallback   string
+//	FallbackIP string
+//	Misc       string
+	Mounts     map[string]*Mount
 }
 
-// These could more simply be attributes of Mount
-type SourceInformation struct {
-	Identifier     string
-	Format         string
-	FormatDetails  string
-	Carrier        string
-	NavSystem      string
-	Network        string
-	CountryCode    string
-	Latitude       string
-	Longitude      string
-	NMEA           string
-	Solution       string
-	Generator      string
-	Compression    string
-	Authentication string
-	Fee            string
-	Bitrate        string
+// String representation of Caster in NTRIP Sourcetable entry format
+func (caster *Caster) String() string {
+	return fmt.Sprintf("CAS;%s;%s;%s;%s;0;%s;0;0;;",
+		caster.Hostname, caster.Port, caster.Identifier, caster.Operator, caster.Country)
+}
+
+func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s\r\n", caster)
+	for _, mount := range caster.Mounts {
+		if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
+			fmt.Fprintf(w, "%s\r\n", mount)
+		}
+	}
+	w.(http.Flusher).Flush()
+}
+
+func (caster *Caster) GetMountpoint(w http.ResponseWriter, r *http.Request) {
+	mount, exists := caster.Mounts[r.URL.Path[1:]]
+	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.(http.Flusher).Flush() // Return 200
+
+	// TODO: Write NewMQTTClient function
+	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	defer subClient.Disconnect(0)
+
+	data := make(chan []byte)
+	token := subClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
+	})
+	if token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+
+	for { // TODO: Implement timeout
+		fmt.Fprintf(w, "%s\r\n", <-data)
+		w.(http.Flusher).Flush()
+	}
+}
+
+func (caster *Caster) PostMountpoint(w http.ResponseWriter, r *http.Request) {
+	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+	defer pubClient.Disconnect(0)
+
+	w.Header().Set("Connection", "close")
+	w.(http.Flusher).Flush()
+	time.Sleep(1 * time.Second) // Why? Without this it looks like we're reading from the body before the POSTer has sent any data
+
+	// TODO: Probably only need to parse Frame, and get message number
+	scanner := rtcm3.NewScanner(r.Body)
+	msg, err := scanner.Next()
+	for ; err == nil; msg, err = scanner.Next() {
+		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], msg.Number()), 1, false, msg.Serialize())
+	}
+	fmt.Println(err)
+}
+
+// TODO: Clients subscribe to Mount so each client doesn't need a MQTT connection - maybe not necessary
+// TODO: Handle concurrent writes to Mount using a lock
+type Mount struct {
+	Name           string
+	Identifier     string // meta
+	Format         string // stream - minor version doesn't really matter since RTCM3 is strictly additive
+	FormatDetails  string // stream
+	Carrier        string // stream
+	NavSystem      string // stream
+	Network        string // meta
+	CountryCode    string // meta
+	Latitude       string // meta / stream
+	Longitude      string // meta / stream
+//	NMEA           bool
+//	Solution       bool
+	Generator      string // stream
+//	Compression    string
+//	Authentication string
+//	Fee            bool
+//	Bitrate        int
 	Misc           string
+	LastMessage    time.Time
 }
 
 // String representation of Mount in NTRIP Sourcetable entry format
 func (mount *Mount) String() string {
-	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s",
-		mount.Name, mount.SourceInformation.Identifier, mount.SourceInformation.Format,
-		mount.SourceInformation.FormatDetails, mount.SourceInformation.Carrier,
-		mount.SourceInformation.NavSystem, mount.SourceInformation.Network,
-		mount.SourceInformation.CountryCode, mount.SourceInformation.Latitude,
-		mount.SourceInformation.Longitude, mount.SourceInformation.NMEA,
-		mount.SourceInformation.Solution, mount.SourceInformation.Generator,
-		mount.SourceInformation.Compression, mount.SourceInformation.Authentication,
-		mount.SourceInformation.Fee, mount.SourceInformation.Bitrate, mount.SourceInformation.Misc)
+	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;0;0;%s;none;N;N;0;%s",
+		mount.Name, mount.Identifier, mount.Format, mount.FormatDetails, mount.Carrier,
+		mount.NavSystem, mount.Network, mount.CountryCode, mount.Latitude, mount.Longitude,
+		mount.Generator, mount.Misc)
 }
 
-var ( // TODO: Define mounts from config
-	broker = "tcp://35.189.48.59:1883"
-	mounts = map[string]*Mount{
-		"SYMY00AUS": &Mount{"SYMY00AUS", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
-		"TEST00AUS": &Mount{"TEST00AUS", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
-		"TEST04AUS": &Mount{"TEST04AUS", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
-		"TEST05AUS": &Mount{"TEST05AUS", time.Unix(0, 0), SourceInformation{Identifier: "Canberra (ACT)", Format: "RTCM3.2"}},
-	}
+var ( // TODO: Define from config
+	broker = "tcp://localhost:1883"
+	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
+		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"ALIC00AUS": &Mount{Name: "ALIC00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST00AUS": &Mount{Name: "TEST00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST04AUS": &Mount{Name: "TEST04AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST05AUS": &Mount{Name: "TEST05AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+	}}
 )
 
 func main() {
+	// Watcher subscriptions update last received message on Mount objects so 404s and timeouts can be implemented
+	// TODO: Create these subscriptions on initialization of / changes to config
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
 	defer mqttClient.Disconnect(0)
-
-	for _, mount := range mounts { // Create these subscriptions on initialization of / changes to config
+	for _, mount := range caster.Mounts {
 		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure
-			token := mqttClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+			token := mqttClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
@@ -80,69 +154,10 @@ func main() {
 		}(mount)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
-		if r.URL.Path == "/" { // Return sourcetable
-			fmt.Fprintf(w, "CAS;go-ntrip.geops.team;2101;Go NTRIP to MQTT Proxy;GA;0;AUS;0;0\r\n")
-			for _, mount := range mounts {
-				if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
-					fmt.Fprintf(w, "%s\r\n", mount)
-				}
-			}
-			w.(http.Flusher).Flush()
-			return
-		}
+	httpMux := mux.NewRouter()
+	httpMux.HandleFunc("/", caster.GetSourcetable).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", caster.GetMountpoint).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", caster.PostMountpoint).Methods("POST")
 
-		switch r.Method {
-		case http.MethodGet: // Create MQTT connection on behalf of the client and subscribe to Topic of Mount.Name
-			mount, exists := mounts[r.URL.Path[1:]]
-			if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			w.(http.Flusher).Flush() // Return 200
-
-			subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
-			if token := subClient.Connect(); token.Wait() && token.Error() != nil {
-				panic(token.Error())
-			}
-			defer subClient.Disconnect(0)
-
-			data := make(chan []byte)
-			token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-				data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
-			})
-			if token.Wait() && token.Error() != nil {
-				panic(token.Error())
-			}
-
-			for { // TODO: Implement timeout
-				fmt.Fprintf(w, "%s\r\n", <-data)
-				w.(http.Flusher).Flush()
-			}
-
-		case http.MethodPost: // Could currently have multiple sources POSTing to the same topic
-			pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
-			if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
-				panic(token.Error())
-			}
-			defer pubClient.Disconnect(0)
-
-			w.Header().Set("Connection", "close")
-			w.(http.Flusher).Flush()
-			time.Sleep(1 * time.Second) // Why? Without this it looks like we're reading from the body before the POSTer has sent any data
-
-			scanner := rtcm3.NewScanner(r.Body) // Should probably just parse Frame, not Message
-			msg, err := scanner.Next()
-			for ; err == nil; msg, err = scanner.Next() {
-				pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], msg.Number()), 1, false, msg.Serialize())
-				//fmt.Fprintf(w, "\r\n")
-				//w.(http.Flusher).Flush()
-			}
-			fmt.Println(err)
-		}
-	})
-
-	log.Fatal(http.ListenAndServe(":2101", nil))
+	log.Fatal(http.ListenAndServe(":" + caster.Port, httpMux))
 }

@@ -21,6 +21,7 @@ func main() {
 
     opts.SetDefaultPublishHandler(func(client MQTT.Client, mqttMsg MQTT.Message) {
         rtcmMsg := rtcm3.DeserializeMessage(mqttMsg.Payload())
+		//fmt.Printf("%+v\r\n", rtcmMsg)
         switch int(rtcmMsg.Number()) {
         case 1071, 1072, 1073, 1074, 1075, 1076, 1077,
              1081, 1082, 1083, 1084, 1085, 1086, 1087,
