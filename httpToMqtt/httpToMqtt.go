@@ -1,4 +1,4 @@
-// Naive implementation of a "NTRIP" to MQTT proxy
+// Implementation of a "NTRIP" to MQTT proxy
 package main
 
 import (
