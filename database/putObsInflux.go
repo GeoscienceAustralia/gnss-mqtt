@@ -1,3 +1,4 @@
+// Naively stores the serialized binary representation of MSM messages in InfluxDB
 package main
 
 import (
