@@ -2,11 +2,13 @@
 package main
 
 import (
+	"os"
 	"log"
 	"fmt"
 	"time"
 	"net/http"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/handlers"
 	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -168,5 +170,6 @@ func main() {
 	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":" + caster.Port, httpMux))
+	logRouter := handlers.LoggingHandler(os.Stdout, httpMux)
+	log.Fatal(http.ListenAndServe(":" + caster.Port, logRouter))
 }
