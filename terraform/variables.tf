@@ -46,8 +46,8 @@ variable "min-size" {
   description = "Autoscaling Minimum node capacity"
 }
 
-variable "state_bucket" {}
+variable "bucket" {}
 
-variable "state_table" {}
+variable "dynamodb_table" {}
 
 variable "region" {}

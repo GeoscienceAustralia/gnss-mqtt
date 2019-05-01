@@ -69,5 +69,9 @@ spec:
   ports:
     - protocol: TCP
       port: 1883
+      name: mqtt-port
+    - protocol: TCP
+      port: 443
       targetPort: 1883
+      name: mqtt-http-port
   type: LoadBalancer

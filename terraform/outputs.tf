@@ -2,6 +2,6 @@ output "kubeconfig" {
   value = "${module.eks.kubeconfig}"
 }
 
-output "config-map" {
-  value = "${module.eks.config-map-aws-auth}"
+output "eks_kubectl_role_arn" {
+  value = "${module.eks.eks_kubectl_role_arn}"
 }
