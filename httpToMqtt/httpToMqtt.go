@@ -11,6 +11,9 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Topic semantically represents an MQTT topic name
+type Topic string
+
 // Caster contains global configuration for handling connections and constructing sourcetable 
 type Caster struct {
 	Port       string
@@ -24,7 +27,7 @@ type Caster struct {
 //	Fallback   string
 //	FallbackIP string
 //	Misc       string
-	Mounts     map[string]*Mount
+	Mounts     map[Topic]*Mount
 }
 
 // String representation of Caster in NTRIP Sourcetable entry format
@@ -47,7 +50,7 @@ func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 // GetMount handles GET requests for Mounts, establishing an MQTT client and
 // subscription for each request and streaming the data back to the client
 func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
-	mount, exists := caster.Mounts[r.URL.Path[1:]]
+	mount, exists := caster.Mounts[Topic(r.URL.Path[1:])]
 	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -133,7 +136,7 @@ func (mount *Mount) String() string {
 
 var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
 	broker = "tcp://localhost:1883"
-	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
+	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[Topic]*Mount{
 		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 		"ALIC00AUS": &Mount{Name: "ALIC00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 		"TEST00AUS": &Mount{Name: "TEST00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
