@@ -4,8 +4,8 @@ data "terraform_remote_state" "remote_state" {
   backend = "s3"
 
   config {
-    bucket         = "${var.state_bucket}"
-    dynamodb_table = "${var.state_table}"
+    bucket         = "${var.bucket}"
+    dynamodb_table = "${var.dynamodb_table}"
     region         = "${var.region}"
     key            = "terraform.tfstate"
   }
