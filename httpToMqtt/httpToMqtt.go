@@ -58,16 +58,18 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	// TODO: Write NewMQTTClient function
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return // TODO: log error
 	}
-	defer subClient.Disconnect(0)
+	defer subClient.Disconnect(100)
 
 	data := make(chan []byte)
 	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
 	})
 	if token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return // TODO: log error
 	}
 
 	for {
@@ -86,9 +88,10 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return // TODO: log error
 	}
-	defer pubClient.Disconnect(0)
+	defer pubClient.Disconnect(100)
 
 	w.Header().Set("Connection", "close")
 	w.(http.Flusher).Flush()
@@ -158,7 +161,7 @@ func main() {
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-	defer mqttClient.Disconnect(0)
+	defer mqttClient.Disconnect(100)
 
 	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
@@ -167,7 +170,7 @@ func main() {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
-				panic(token.Error())
+				panic(token.Error()) //TODO: handle properly
 			}
 		}(mount)
 	}
