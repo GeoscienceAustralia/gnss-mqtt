@@ -180,5 +180,12 @@ func main() {
 	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
+	srv := &http.Server{
+		Handler:      httpMux,
+		Addr:         ":" + caster.Port,
+		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  5 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
