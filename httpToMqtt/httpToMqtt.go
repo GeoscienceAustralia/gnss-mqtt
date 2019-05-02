@@ -2,32 +2,29 @@
 package main
 
 import (
-	"log"
 	"fmt"
-	"time"
-	"net/http"
-	"github.com/gorilla/mux"
-	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
+	"github.com/gorilla/mux"
+	"log"
+	"net/http"
+	"time"
 )
 
-// Topic semantically represents an MQTT topic name
-type Topic string
-
-// Caster contains global configuration for handling connections and constructing sourcetable 
+// Caster contains global configuration for handling connections and constructing sourcetable
 type Caster struct {
 	Port       string
 	Hostname   string // TODO: Lookup?
 	Identifier string
 	Operator   string
-//	NMEA       bool
-	Country    string
-//	Latitude   float64
-//	Longitude  float64
-//	Fallback   string
-//	FallbackIP string
-//	Misc       string
-	Mounts     map[Topic]*Mount
+	//	NMEA       bool
+	Country string
+	//	Latitude   float64
+	//	Longitude  float64
+	//	Fallback   string
+	//	FallbackIP string
+	//	Misc       string
+	Mounts map[string]*Mount
 }
 
 // String representation of Caster in NTRIP Sourcetable entry format
@@ -50,8 +47,8 @@ func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 // GetMount handles GET requests for Mounts, establishing an MQTT client and
 // subscription for each request and streaming the data back to the client
 func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
-	mount, exists := caster.Mounts[Topic(r.URL.Path[1:])]
-	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
+	mount, exists := caster.Mounts[r.URL.Path[1:]]
+	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -66,16 +63,21 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	defer subClient.Disconnect(0)
 
 	data := make(chan []byte)
-	token := subClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
 	})
 	if token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
 
-	for { // TODO: Implement timeout
-		fmt.Fprintf(w, "%s\r\n", <-data)
-		w.(http.Flusher).Flush()
+	for {
+		select {
+		case d := <-data:
+			fmt.Fprintf(w, "%s\r\n", d)
+			w.(http.Flusher).Flush()
+		case <-time.After(time.Second * 3):
+			return
+		}
 	}
 }
 
@@ -105,25 +107,25 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 // TODO: Clients could subscribe to a Mount so each client doesn't need a MQTT connection - less load on MQTT broker, but maybe not necessary
 // TODO: Handle concurrent writes to Mount using a lock, concurrent writes to LastMessage could break
 type Mount struct {
-	Name           string
-	Identifier     string // meta
-	Format         string // stream - minor version doesn't really matter since RTCM3 is strictly additive
-	FormatDetails  string // stream
-	Carrier        string // stream
-	NavSystem      string // stream
-	Network        string // meta
-	CountryCode    string // meta
-	Latitude       string // meta / stream
-	Longitude      string // meta / stream
-//	NMEA           bool
-//	Solution       bool
-	Generator      string // stream
-//	Compression    string
-//	Authentication string
-//	Fee            bool
-//	Bitrate        int
-	Misc           string
-	LastMessage    time.Time
+	Name          string
+	Identifier    string // meta
+	Format        string // stream - minor version doesn't really matter since RTCM3 is strictly additive
+	FormatDetails string // stream
+	Carrier       string // stream
+	NavSystem     string // stream
+	Network       string // meta
+	CountryCode   string // meta
+	Latitude      string // meta / stream
+	Longitude     string // meta / stream
+	//	NMEA           bool
+	//	Solution       bool
+	Generator string // stream
+	//	Compression    string
+	//	Authentication string
+	//	Fee            bool
+	//	Bitrate        int
+	Misc        string
+	LastMessage time.Time
 }
 
 // String representation of Mount in NTRIP Sourcetable entry format
@@ -136,9 +138,13 @@ func (mount *Mount) String() string {
 
 var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
 	broker = "tcp://localhost:1883"
-	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[Topic]*Mount{
+	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
 		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 		"ALIC00AUS": &Mount{Name: "ALIC00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"YAR200AUS": &Mount{Name: "YAR200AUS", LastMessage: time.Unix(0, 0), Identifier: "Yarragadee (WA)", Format: "RTCM 3.3"},
+		"PARK00AUS": &Mount{Name: "PARK00AUS", LastMessage: time.Unix(0, 0), Identifier: "Parkes (NSW)", Format: "RTCM 3.3"},
+		"ALBU00AUS": &Mount{Name: "ALBU00AUS", LastMessage: time.Unix(0, 0), Identifier: "Albury (NSW)", Format: "RTCM 3.3"},
+		"DAV100AUS": &Mount{Name: "DAV100AUS", LastMessage: time.Unix(0, 0), Identifier: "Davis Station", Format: "RTCM 3.3"},
 		"TEST00AUS": &Mount{Name: "TEST00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 		"TEST04AUS": &Mount{Name: "TEST04AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 		"TEST05AUS": &Mount{Name: "TEST05AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
@@ -157,7 +163,7 @@ func main() {
 	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
 		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
-			token := mqttClient.Subscribe(mount.Name + "/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+			token := mqttClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
@@ -171,5 +177,5 @@ func main() {
 	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":" + caster.Port, httpMux))
+	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
 }
