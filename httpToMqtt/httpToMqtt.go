@@ -77,6 +77,8 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 		case d := <-data:
 			fmt.Fprintf(w, "%s\r\n", d)
 			w.(http.Flusher).Flush()
+		case <-r.Context().Done():
+			return
 		case <-time.After(time.Second * 3):
 			return
 		}
@@ -180,12 +182,5 @@ func main() {
 	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
 
-	srv := &http.Server{
-		Handler:      httpMux,
-		Addr:         ":" + caster.Port,
-		WriteTimeout: 5 * time.Second,
-		ReadTimeout:  5 * time.Second,
-	}
-
-	log.Fatal(srv.ListenAndServe())
+	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
 }
