@@ -3,12 +3,12 @@ package main
 
 import (
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
-	"github.com/gorilla/mux"
-	"log"
-	"net/http"
 	"time"
+	"net/http"
+	"github.com/gorilla/mux"
+	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	log "github.com/sirupsen/logrus"
 )
 
 // Caster contains global configuration for handling connections and constructing sourcetable
