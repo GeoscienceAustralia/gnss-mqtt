@@ -77,6 +77,8 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 		case d := <-data:
 			fmt.Fprintf(w, "%s\r\n", d)
 			w.(http.Flusher).Flush()
+		case <-r.Context().Done():
+			return
 		case <-time.After(time.Second * 3):
 			return
 		}
