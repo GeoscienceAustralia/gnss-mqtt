@@ -1,0 +1,22 @@
+{application, vernemq_demo_plugin,
+ [
+  {description, "A simple demo Plugin for VerneMQ"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { vernemq_demo_plugin_app, []}},
+  {env, [
+         %% this tells VerneMQ to look in the file 'vernemq_demo_plugin'
+         %% for the plugin hook functions. The format is:
+         %%  {ModuleName, HookName, Arity, Opts}
+         {vmq_plugin_hooks,
+          [
+           {vernemq_demo_plugin, auth_on_register, 5, []},
+           {vernemq_demo_plugin, auth_on_publish, 6, []},
+           {vernemq_demo_plugin, auth_on_subscribe, 3, []}
+          ]}
+        ]}
+ ]}.
