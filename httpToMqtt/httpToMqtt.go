@@ -4,8 +4,10 @@ package main
 import (
 	"fmt"
 	"time"
+	"context"
 	"net/http"
 	"github.com/gorilla/mux"
+	"github.com/google/uuid"
 	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	log "github.com/sirupsen/logrus"
@@ -47,39 +49,50 @@ func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 // GetMount handles GET requests for Mounts, establishing an MQTT client and
 // subscription for each request and streaming the data back to the client
 func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
+	logger := r.Context().Value("logger").(*log.Entry)
+
+	// Check if mountpoint exists
 	mount, exists := caster.Mounts[r.URL.Path[1:]]
 	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
+		logger.Info("no existing mountpoint")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	w.(http.Flusher).Flush() // Return 200
-
-	// TODO: Write NewMQTTClient function
+	// Create MQTT client connection on behalf of HTTP user
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
+		logger.Error("failed to create MQTT client: " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return // TODO: log error
 	}
 	defer subClient.Disconnect(100)
 
+	// Subscribe to MQTT topic and forward messages to channel
 	data := make(chan []byte)
 	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
+		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize() // Need an encapsulation method which takes []byte
 	})
 	if token.Wait() && token.Error() != nil {
+		logger.Error("MQTT subscription failed: " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		return // TODO: log error
+		return
 	}
+
+	logger.Info("accepted client connection")
+	w.(http.Flusher).Flush() // Return 200
 
 	for {
 		select {
+		// Read data from MQTT channel and write to HTTP connection
 		case d := <-data:
 			fmt.Fprintf(w, "%s\r\n", d)
 			w.(http.Flusher).Flush()
 		case <-r.Context().Done():
+			logger.Info("client disconnected")
 			return
 		case <-time.After(time.Second * 3):
+			logger.Info("timeout reading from MQTT subscription channel")
 			return
 		}
 	}
@@ -88,24 +101,31 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 // PostMount handles POST requests to a Mount, parsing the stream as RTCM and
 // forwarding to MQTT broker
 func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
+	logger := r.Context().Value("logger").(*log.Entry)
+
+	// Create MQTT client connection on behalf of HTTP user
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
+		logger.Error("failed to create MQTT client: " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		return // TODO: log error
+		return
 	}
 	defer pubClient.Disconnect(100)
 
 	w.Header().Set("Connection", "close")
 	w.(http.Flusher).Flush()
-	time.Sleep(1 * time.Second) // Why? Without this it looks like we're reading from the body before the POSTer has sent any data
+	// Without this sleep it looks like we're reading from the body before the POSTer has sent any data, which returns an error
+	// Need to find a better way of waiting until we have received data / timing out
+	time.Sleep(1 * time.Second)
 
-	// TODO: Probably only need to parse Frame, and get message number
+	// Scan POSTed data for RTCM messages and publish with MQTT client
+	// TODO: Should parse Frame only and get message number, instead of parsing entire message
 	scanner := rtcm3.NewScanner(r.Body)
 	msg, err := scanner.Next()
 	for ; err == nil; msg, err = scanner.Next() {
 		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], msg.Number()), 1, false, msg.Serialize())
 	}
-	fmt.Println(err)
+	log.Error(err.Error())
 }
 
 // Mount represents a NTRIP mountpoint which proxies through to an MQTT topic
@@ -157,6 +177,8 @@ var ( // TODO: Define from config file - would like to find config manager which
 )
 
 func main() {
+	log.SetFormatter(&log.JSONFormatter{})
+
 	// Watcher subscriptions update last received message on Mount objects so 404s and timeouts can be implemented
 	// TODO: Create these subscriptions on initialization of / changes to config
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
@@ -181,6 +203,32 @@ func main() {
 	httpMux.HandleFunc("/", caster.GetSourcetable).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
+
+	// This is probably fancier than it needs to be, could really just have a GetLogger function so we don't have to cast when pulling out the logger
+	// Perhaps a mix of both makes sense, where the UUID is added to context, but you generate a logger from the Request (which includes the context) when you need it
+	// One benefit of defining the logger in the Context is that it can be appended to
+	httpMux.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestId := uuid.New().String()
+			ctx := context.WithValue(r.Context(), "UUID", requestId)
+			ctx = context.WithValue(ctx, "logger", log.WithFields(log.Fields{
+				"request_id": requestId,
+				"path":       r.URL.Path,
+				"method":     r.Method,
+				"source_ip":  r.RemoteAddr,
+			}))
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
+
+	httpMux.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// A benefit of including the logger in the context is that it can be used in here too
+			// Though we could just call NewLogger with the Request Context here too
+			r.Context().Value("logger").(*log.Entry).Info("authorized")
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
 }
