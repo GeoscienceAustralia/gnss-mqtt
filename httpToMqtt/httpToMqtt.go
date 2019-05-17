@@ -62,7 +62,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	// Create MQTT client connection on behalf of HTTP user
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
-		logger.Error("failed to create MQTT client: " + token.Error().Error())
+		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return // TODO: log error
 	}
@@ -74,12 +74,11 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize() // Need an encapsulation method which takes []byte
 	})
 	if token.Wait() && token.Error() != nil {
-		logger.Error("MQTT subscription failed: " + token.Error().Error())
+		logger.Error("MQTT subscription failed - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	logger.Info("accepted client connection")
 	w.(http.Flusher).Flush() // Return 200
 
 	for {
@@ -100,13 +99,16 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 
 // PostMount handles POST requests to a Mount, parsing the stream as RTCM and
 // forwarding to MQTT broker
+// TODO: Currently not checking if the mount is in caster.Mounts or if it's
+// currently up, so can have multiple publishers on the same topic. I don't
+// know if there's a reasonable way to avoid this
 func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Create MQTT client connection on behalf of HTTP user
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
-		logger.Error("failed to create MQTT client: " + token.Error().Error())
+		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -125,7 +127,7 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	for ; err == nil; msg, err = scanner.Next() {
 		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], msg.Number()), 1, false, msg.Serialize())
 	}
-	log.Error(err.Error())
+	log.Error("stream ended - " + err.Error())
 }
 
 // Mount represents a NTRIP mountpoint which proxies through to an MQTT topic
