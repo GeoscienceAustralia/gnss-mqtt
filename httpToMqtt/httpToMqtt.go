@@ -79,7 +79,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("client connected")
+	logger.Info("client connected")
 	w.(http.Flusher).Flush() // Return 200
 
 	for {
@@ -115,7 +115,7 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	}
 	defer pubClient.Disconnect(100)
 
-	log.Info("client connected")
+	logger.Info("client connected")
 	w.Header().Set("Connection", "close")
 	w.(http.Flusher).Flush()
 	// Without this sleep it looks like we're reading from the body before the POSTer has sent any data, which returns an error
