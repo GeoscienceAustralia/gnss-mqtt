@@ -125,9 +125,9 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	// Scan POSTed data for RTCM messages and publish with MQTT client
 	// TODO: Should parse Frame only and get message number, instead of parsing entire message
 	scanner := rtcm3.NewScanner(r.Body)
-	msg, err := scanner.Next()
-	for ; err == nil; msg, err = scanner.Next() {
-		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], msg.Number()), 1, false, msg.Serialize())
+	rtcmFrame, err := scanner.NextFrame()
+	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {
+		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
 	}
 	log.Error("stream ended - " + err.Error())
 }
@@ -229,7 +229,7 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// A benefit of including the logger in the context is that it can be used in here too
 			// Though we could just call NewLogger with the Request Context here too
-			//r.Context().Value("logger").(*log.Entry).Info("unauthorized")
+			r.Context().Value("logger").(*log.Entry).Info("authorized request")
 			next.ServeHTTP(w, r)
 		})
 	})
