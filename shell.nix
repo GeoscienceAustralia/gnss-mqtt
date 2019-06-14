@@ -1,15 +1,30 @@
-{ nixpkgs ? import <nixpkgs> {} }:
+{
+  pkgs ? import ./nix {},
+}:
+
 let
-  inherit (nixpkgs) pkgs;
-in
-pkgs.stdenv.mkDerivation {
-  name = "testing";
-  buildInputs = with pkgs; [
+  projectName = "gnss-mqtt";
+
+  buildTools = with pkgs; [
     terraform
     aws-iam-authenticator
     google-cloud-sdk
     kubectl
     mosquitto
-    go
+    go_1_12
   ];
-}
+
+  env = pkgs.buildEnv {
+    name = projectName + "-env";
+    paths = buildTools;
+  };
+
+in
+  pkgs.mkShell {
+    buildInputs = [
+      env
+    ];
+    shellHook = ''
+      export PROJECT_NAME=${projectName}
+    '';
+  }
