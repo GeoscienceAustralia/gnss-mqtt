@@ -1,5 +1,5 @@
 // Implementation of an NTRIP Gateway for MQTT
-module gateway
+module ntripgateway
 
 go 1.12
 
