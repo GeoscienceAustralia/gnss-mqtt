@@ -1,4 +1,5 @@
-module httpToMqtt.go
+// Implementation of an NTRIP Gateway for MQTT
+module ntripMqttGateway
 
 go 1.12
 

@@ -1,3 +1,4 @@
+// MQTT Relay Adapter for NTRIP
 package main
 
 import (
