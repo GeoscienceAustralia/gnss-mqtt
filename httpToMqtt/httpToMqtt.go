@@ -13,6 +13,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
+	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
+		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"ALIC00AUS": &Mount{Name: "ALIC00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"YAR200AUS": &Mount{Name: "YAR200AUS", LastMessage: time.Unix(0, 0), Identifier: "Yarragadee (WA)", Format: "RTCM 3.3"},
+		"PARK00AUS": &Mount{Name: "PARK00AUS", LastMessage: time.Unix(0, 0), Identifier: "Parkes (NSW)", Format: "RTCM 3.3"},
+		"ALBU00AUS": &Mount{Name: "ALBU00AUS", LastMessage: time.Unix(0, 0), Identifier: "Albury (NSW)", Format: "RTCM 3.3"},
+		"DAV100ANT": &Mount{Name: "DAV100ANT", LastMessage: time.Unix(0, 0), Identifier: "Davis Station", Format: "RTCM 3.3"},
+		"TEST00AUS": &Mount{Name: "TEST00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST04AUS": &Mount{Name: "TEST04AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST05AUS": &Mount{Name: "TEST05AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+	}, "tcp://localhost:1883"}
+)
+
 // Caster contains global configuration for handling connections and constructing sourcetable
 type Caster struct {
 	Port       string
@@ -27,6 +41,7 @@ type Caster struct {
 	//	FallbackIP string
 	//	Misc       string
 	Mounts map[string]*Mount
+	Broker string
 }
 
 // String representation of Caster in NTRIP Sourcetable entry format
@@ -60,7 +75,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create MQTT client connection on behalf of HTTP user
-	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,7 +122,7 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Create MQTT client connection on behalf of HTTP user
-	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -164,27 +179,12 @@ func (mount *Mount) String() string {
 		mount.Generator, mount.Misc)
 }
 
-var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
-	broker = "tcp://localhost:1883"
-	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP to MQTT Proxy", "GA", "AUS", map[string]*Mount{
-		"SYMY00AUS": &Mount{Name: "SYMY00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"ALIC00AUS": &Mount{Name: "ALIC00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"YAR200AUS": &Mount{Name: "YAR200AUS", LastMessage: time.Unix(0, 0), Identifier: "Yarragadee (WA)", Format: "RTCM 3.3"},
-		"PARK00AUS": &Mount{Name: "PARK00AUS", LastMessage: time.Unix(0, 0), Identifier: "Parkes (NSW)", Format: "RTCM 3.3"},
-		"ALBU00AUS": &Mount{Name: "ALBU00AUS", LastMessage: time.Unix(0, 0), Identifier: "Albury (NSW)", Format: "RTCM 3.3"},
-		"DAV100AUS": &Mount{Name: "DAV100AUS", LastMessage: time.Unix(0, 0), Identifier: "Davis Station", Format: "RTCM 3.3"},
-		"TEST00AUS": &Mount{Name: "TEST00AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST04AUS": &Mount{Name: "TEST04AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST05AUS": &Mount{Name: "TEST05AUS", LastMessage: time.Unix(0, 0), Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-	}}
-)
-
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
 	// Watcher subscriptions update last received message on Mount objects so 404s and timeouts can be implemented
 	// TODO: Create these subscriptions on initialization of / changes to config
-	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
@@ -194,6 +194,7 @@ func main() {
 	for _, mount := range caster.Mounts {
 		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
 			token := mqttClient.Subscribe(mount.Name+"/RTCM3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+				//TODO: this can conflict with reads of mount.LastMessage and presumably cause runtime errors
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
