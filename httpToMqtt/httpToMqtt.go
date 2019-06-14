@@ -70,7 +70,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 
 	// Subscribe to MQTT topic and forward messages to channel
 	data := make(chan []byte)
-	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+	token := subClient.Subscribe(mount.Name+"/RTCM3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize() // Need an encapsulation method which takes []byte
 	})
 	if token.Wait() && token.Error() != nil {
@@ -126,7 +126,7 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	scanner := rtcm3.NewScanner(r.Body)
 	rtcmFrame, err := scanner.NextFrame()
 	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {
-		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
+		pubClient.Publish(fmt.Sprintf("%s/RTCM3/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
 	}
 	log.Error("stream ended - " + err.Error())
 }
@@ -193,7 +193,7 @@ func main() {
 	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
 		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
-			token := mqttClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+			token := mqttClient.Subscribe(mount.Name+"/RTCM3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
@@ -221,15 +221,6 @@ func main() {
 				"source_ip":  r.RemoteAddr,
 			}))
 			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	})
-
-	httpMux.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// A benefit of including the logger in the context is that it can be used in here too
-			// Though we could just call NewLogger with the Request Context here too
-			//r.Context().Value("logger").(*log.Entry).Info("unauthorized")
-			next.ServeHTTP(w, r)
 		})
 	})
 
