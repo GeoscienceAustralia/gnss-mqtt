@@ -127,4 +127,3 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Error("stream ended - " + err.Error())
 }
-

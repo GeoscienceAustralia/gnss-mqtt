@@ -24,7 +24,6 @@ var ( // TODO: Define from config file - would like to find config manager which
 	}, "tcp://localhost:1883"}
 )
 
-//TODO: Potentially move Caster and Mount components into separate importable library and keep main package minimal so they can be tested independantly
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 
