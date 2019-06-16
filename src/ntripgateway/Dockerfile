@@ -4,6 +4,6 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build .
 
 FROM scratch
-COPY --from=builder /ntripMqttGateway /ntripMqttGateway
+COPY --from=builder /ntripgateway /ntripgateway
 EXPOSE 2101
-CMD ["/ntripMqttGateway"]
+CMD ["/ntripgateway"]
