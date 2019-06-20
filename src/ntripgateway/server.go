@@ -1,41 +1,40 @@
 package main
 
 import (
-	"time"
 	"context"
-	"net/http"
-	"github.com/gorilla/mux"
-	"github.com/google/uuid"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-)
-
-var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
-	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP Gateway for MQTT", "GA", "AUS", map[string]*Mount{
-		"TEST00AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST01AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST02AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST03AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST04AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST05AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST06AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST07AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST08AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST09AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST10AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST11AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST12AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST13AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST14AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST15AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST16AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST17AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST18AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST19AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-	}, "tcp://localhost:1883"}
+	"net/http"
+	"time"
 )
 
 func main() {
+	// TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
+	caster := &Caster{"2101", "go-ntrip.geops.team", "NTRIP Gateway for MQTT", "GA", "AUS", map[string]*Mount{
+		"TEST00AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST01AUS": &Mount{Name: "TEST01AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST02AUS": &Mount{Name: "TEST02AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST03AUS": &Mount{Name: "TEST03AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST04AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST05AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST06AUS": &Mount{Name: "TEST06AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST07AUS": &Mount{Name: "TEST07AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST08AUS": &Mount{Name: "TEST08AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST09AUS": &Mount{Name: "TEST09AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST10AUS": &Mount{Name: "TEST10AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST11AUS": &Mount{Name: "TEST11AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST12AUS": &Mount{Name: "TEST12AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST13AUS": &Mount{Name: "TEST13AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST14AUS": &Mount{Name: "TEST14AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST15AUS": &Mount{Name: "TEST15AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST16AUS": &Mount{Name: "TEST16AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST17AUS": &Mount{Name: "TEST17AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST18AUS": &Mount{Name: "TEST18AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST19AUS": &Mount{Name: "TEST19AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+	}, "tcp://localhost:1883"}
+
 	log.SetFormatter(&log.JSONFormatter{})
 
 	// Watcher subscriptions update last received message on Mount objects so 404s and timeouts can be implemented
@@ -48,9 +47,8 @@ func main() {
 
 	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
-		go func(mount *Mount) { // This doesn't need to be a go routine, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
-			token := mqttClient.Subscribe(mount.Name+"/RTCM3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-				//TODO: this can conflict with reads of mount.LastMessage and presumably cause runtime errors
+		func(mount *Mount) { // This doesn't need to be a function, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
+			token := mqttClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
@@ -81,5 +79,6 @@ func main() {
 		})
 	})
 
+	log.Info("server starting")
 	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
 }

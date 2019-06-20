@@ -37,4 +37,3 @@ func (mount *Mount) String() string {
 		mount.NavSystem, mount.Network, mount.CountryCode, mount.Latitude, mount.Longitude,
 		mount.Generator, mount.Misc)
 }
-

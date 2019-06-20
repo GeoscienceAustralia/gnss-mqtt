@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"time"
-	"net/http"
-	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"time"
 )
 
 // Caster contains global configuration for handling connections and constructing sourcetable
@@ -68,8 +68,9 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 
 	// Subscribe to MQTT topic and forward messages to channel
 	data := make(chan []byte)
-	token := subClient.Subscribe(mount.Name+"/RTCM3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize() // Need an encapsulation method which takes []byte
+	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+		//TODO: Add an encapsulation method which takes []byte
+		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
 	})
 	if token.Wait() && token.Error() != nil {
 		logger.Error("MQTT subscription failed - " + token.Error().Error())
@@ -100,7 +101,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 // forwarding to MQTT broker
 // TODO: Currently not checking if the mount is in caster.Mounts or if it's
 // currently up, so can have multiple publishers on the same topic. I don't
-// know if there's a reasonable way to avoid this
+// know if there's a reasonable way to avoid this besides consulting LastMessage
 func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
@@ -113,18 +114,15 @@ func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
 	}
 	defer pubClient.Disconnect(100)
 
-	logger.Info("client connected")
 	w.Header().Set("Connection", "close")
 	w.(http.Flusher).Flush()
-	// Without this sleep it looks like we're reading from the body before the POSTer has sent any data, which returns an error
-	// Need to find a better way of waiting until we have received data / timing out
-	time.Sleep(1 * time.Second)
+	logger.Info("client connected")
 
 	// Scan POSTed data for RTCM messages and publish with MQTT client
 	scanner := rtcm3.NewScanner(r.Body)
 	rtcmFrame, err := scanner.NextFrame()
 	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {
-		pubClient.Publish(fmt.Sprintf("%s/RTCM3/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
+		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
 	}
 	log.Error("stream ended - " + err.Error())
 }
