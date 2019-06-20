@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ng-deployment
+  labels:
+    app: ng
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ng
+  template:
+    metadata:
+      labels:
+        app: ng
+    spec:
+      containers:
+      - name: ng
+        image: geoscienceaustralia/ntripgateway
+        ports:
+        - containerPort: 2101
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nglb
+  labels:
+    app: nglb
+spec:
+  type: LoadBalancer
+  selector:
+    app: ng
+  ports:
+  - port: 2101
+    name: ntrip
+  - protocol: TCP
+    port: 443
+    targetPort: 2101
+    name: ntripssl
