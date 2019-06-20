@@ -51,7 +51,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 
 	// Check if mountpoint exists
 	mount, exists := caster.Mounts[r.URL.Path[1:]]
-	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
+	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
 		logger.Info("no existing mountpoint")
 		w.WriteHeader(http.StatusNotFound)
 		return
