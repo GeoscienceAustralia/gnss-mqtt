@@ -10,7 +10,7 @@ import (
 )
 
 // Caster contains global configuration for handling connections and constructing sourcetable
-type Caster struct {
+type Caster struct { // Caster might be a misnomer since this isn't strictly a broadcast server
 	Port       string
 	Hostname   string // TODO: Lookup?
 	Identifier string

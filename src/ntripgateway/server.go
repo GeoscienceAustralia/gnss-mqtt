@@ -37,22 +37,22 @@ func main() {
 
 	log.SetFormatter(&log.JSONFormatter{})
 
-	// Watcher subscriptions update last received message on Mount objects so 404s and timeouts can be implemented
+	// Watcher subscriptions update LastReceived attribute on Mount objects so 404s and timeouts can be implemented
 	// TODO: Create these subscriptions on initialization of / changes to config
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
 	if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		log.Fatal("failed to create MQTT client - " + token.Error().Error())
 	}
 	defer mqttClient.Disconnect(100)
 
 	// There should be no harm in just resubscribing for all mounts on any change to config
 	for _, mount := range caster.Mounts {
 		func(mount *Mount) { // This doesn't need to be a function, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
-			token := mqttClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+			token := mqttClient.Subscribe(mount.Name + "/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
 				mount.LastMessage = time.Now()
 			})
 			if token.Wait() && token.Error() != nil {
-				panic(token.Error()) //TODO: handle properly
+				log.Fatal("MQTT subscription failed - " + token.Error().Error()) // Should this be fatal?
 			}
 		}(mount)
 	}
@@ -80,5 +80,5 @@ func main() {
 	})
 
 	log.Info("server starting")
-	log.Fatal(http.ListenAndServe(":"+caster.Port, httpMux))
+	log.Fatal(http.ListenAndServe(":" + caster.Port, httpMux))
 }
