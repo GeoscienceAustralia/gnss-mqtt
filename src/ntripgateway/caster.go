@@ -36,6 +36,7 @@ func (caster *Caster) String() string {
 func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\r\n", caster)
 	for _, mount := range caster.Mounts {
+		//TODO: Make timeout configurable and make the following if statement a method of Mount
 		if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
 			fmt.Fprintf(w, "%s\r\n", mount)
 		}

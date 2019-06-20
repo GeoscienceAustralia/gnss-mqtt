@@ -12,15 +12,26 @@ import (
 
 var ( // TODO: Define from config file - would like to find config manager which is capable of invoking a goroutine for each element of list, as well as for new elements added to the list (watcher functions for mounts)
 	caster = &Caster{"2101", "go-ntrip.geops.team", "NTRIP Gateway for MQTT", "GA", "AUS", map[string]*Mount{
-		"SYMY00AUS": &Mount{Name: "SYMY00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"ALIC00AUS": &Mount{Name: "ALIC00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"YAR200AUS": &Mount{Name: "YAR200AUS", Identifier: "Yarragadee (WA)", Format: "RTCM 3.3"},
-		"PARK00AUS": &Mount{Name: "PARK00AUS", Identifier: "Parkes (NSW)", Format: "RTCM 3.3"},
-		"ALBU00AUS": &Mount{Name: "ALBU00AUS", Identifier: "Albury (NSW)", Format: "RTCM 3.3"},
-		"DAV100ANT": &Mount{Name: "DAV100ANT", Identifier: "Davis Station", Format: "RTCM 3.3"},
 		"TEST00AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST04AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
-		"TEST05AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST01AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST02AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST03AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST04AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST05AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST06AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST07AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST08AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST09AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST10AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST11AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST12AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST13AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST14AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST15AUS": &Mount{Name: "TEST00AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST16AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST17AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST18AUS": &Mount{Name: "TEST04AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
+		"TEST19AUS": &Mount{Name: "TEST05AUS", Identifier: "Canberra (ACT)", Format: "RTCM 3.3"},
 	}, "tcp://localhost:1883"}
 )
 
