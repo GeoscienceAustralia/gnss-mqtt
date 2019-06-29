@@ -5,6 +5,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
 	log "github.com/sirupsen/logrus"
+	"net"
 	"net/http"
 	"time"
 )
@@ -79,14 +80,18 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("client connected")
-	w.(http.Flusher).Flush() // Return 200
+	//w.(http.Flusher).Flush() // Return 200
+	r.Context().Value("Conn").(net.Conn).Write([]byte("ICY 200 OK\r\n"))
+	//defer r.Context().Value("Conn").(net.Conn).Close()
+
 
 	for {
 		select {
 		// Read data from MQTT channel and write to HTTP connection
 		case d := <-data:
-			fmt.Fprintf(w, "%s\r\n", d)
-			w.(http.Flusher).Flush()
+			r.Context().Value("Conn").(net.Conn).Write(d)
+			//fmt.Fprintf(w, "%s\r\n", d)
+			//w.(http.Flusher).Flush()
 		case <-r.Context().Done():
 			logger.Info("client disconnected")
 			return
