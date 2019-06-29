@@ -4,6 +4,8 @@ metadata:
   name: ng-deployment
   labels:
     app: ng
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   replicas: 2
   selector:
@@ -16,7 +18,7 @@ spec:
     spec:
       containers:
       - name: ng
-        image: geoscienceaustralia/ntripgateway:0.2
+        image: geoscienceaustralia/ntripgateway:0.6
         ports:
         - containerPort: 2101
 ---
