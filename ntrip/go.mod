@@ -1,4 +1,4 @@
-module ntrip
+module github.com/geoscienceaustralia/gnss-mqtt/ntrip
 
 go 1.12
 
