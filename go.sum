@@ -187,6 +187,12 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/surge/glog v0.0.0-20141108051140-2578deb2b95c h1:cVA8Fd14+bmcDyVutgf976DrV9RzNO4SMzUQmfJDMrw=
+github.com/surge/glog v0.0.0-20141108051140-2578deb2b95c/go.mod h1:W6gI0HQAbNyEO/62hesTBIbabSGJaEdlUApLw8UtuB0=
+github.com/surgemq/message v0.0.0-20151017233315-2b7ca1ac6121 h1:XPyDni7REGO4jY31bhtnRU6WSnj4r2eCYQYMeUBShx4=
+github.com/surgemq/message v0.0.0-20151017233315-2b7ca1ac6121/go.mod h1:aB2Klx/7IKkvtychYbb2GsLDXJMiRgGHbM688Y0eIds=
+github.com/surgemq/surgemq v0.0.0-20181111185059-782e2da07805 h1:nBoLRzlCXyXLUiWT0/44X/XfHikQ85hNg341NScsT0M=
+github.com/surgemq/surgemq v0.0.0-20181111185059-782e2da07805/go.mod h1:ZfhTIH1/q/0oGKBys58X5cbpBix3b3Nj3uka/UQ+GXk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
