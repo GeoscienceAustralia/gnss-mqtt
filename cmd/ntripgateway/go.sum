@@ -45,6 +45,8 @@ github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630051626-58d3d49b0c1
 github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630051626-58d3d49b0c1a/go.mod h1:UFX7fz4azAqEVIJksMQCs9elSH3CT/BgVOIfz2k7x8A=
 github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630052335-34bd0ef2ef1f h1:IYdXZ6K/1CGMv2P8V9jTEklYLPec5eXAHwtN0jL1Pyw=
 github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630052335-34bd0ef2ef1f/go.mod h1:dCO/wrFC3yk9f5nmeeiPQ97So/dd9QLSeRLFI/IVP6k=
+github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630054515-8e2a51ba513b h1:c13ED1oqHLiSBdhlIDw41ljhfL8TkJAUqUZ/ml+m9FM=
+github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630054515-8e2a51ba513b/go.mod h1:mLmgPqXCu1KbokyYP4fATECrnQx6xryLFkcfLYu4M1Q=
 github.com/geoscienceaustralia/go-rtcm v0.0.0-20190613105737-2dc151e09ca6 h1:DHNMYMSJngYb/TjuX7N5A+XwxY90TdnT4qklFG3r1Hg=
 github.com/geoscienceaustralia/go-rtcm v0.0.0-20190613105737-2dc151e09ca6/go.mod h1:XkXO0oKbH33Z4WIrRtrX1fQ3JW5zo2WY5bmUJwa/00U=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

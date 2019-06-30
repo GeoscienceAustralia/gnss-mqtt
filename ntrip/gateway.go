@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Caster contains global configuration for handling connections and constructing sourcetable
-type Caster struct { // Caster might be a misnomer since this isn't strictly a broadcast server
+// Gateway contains global configuration for handling connections and constructing sourcetable
+type Gateway struct { // Gateway might be a misnomer since this isn't strictly a broadcast server
 	Port       string
 	Hostname   string // TODO: Lookup?
 	Identifier string
@@ -29,24 +29,24 @@ type Caster struct { // Caster might be a misnomer since this isn't strictly a b
 	Broker string
 }
 
-// String representation of Caster in NTRIP Sourcetable entry format
-func (caster *Caster) String() string {
+// String representation of Gateway in NTRIP Sourcetable entry format
+func (gateway *Gateway) String() string {
 	return fmt.Sprintf("CAS;%s;%s;%s;%s;0;%s;0;0;;",
-		caster.Hostname, caster.Port, caster.Identifier, caster.Operator, caster.Country)
+		gateway.Hostname, gateway.Port, gateway.Identifier, gateway.Operator, gateway.Country)
 }
 
-func (caster *Caster) Serve() error {
+func (gateway *Gateway) Serve() error {
 	{ // This could probably all be defined in NewMount
 		// Watcher subscriptions update LastReceived attribute on Mount objects so 404s and timeouts can be implemented
 		// TODO: Create these subscriptions on initialization of / changes to config
-		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
+		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
 		if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
 			log.Fatal("failed to create MQTT client - " + token.Error().Error())
 		}
 		defer mqttClient.Disconnect(100)
 
 		// There should be no harm in just resubscribing for all mounts on any change to config
-		for _, mount := range caster.Mounts {
+		for _, mount := range gateway.Mounts {
 			go func(mount *Mount) { // This doesn't need to be a function, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
 				token := mqttClient.Subscribe(mount.Name + "/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
 					mount.LastMessage = time.Now()
@@ -59,9 +59,9 @@ func (caster *Caster) Serve() error {
 	}
 
 	httpMux := mux.NewRouter()
-	httpMux.HandleFunc("/", caster.GetSourcetable).Methods("GET")
-	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
-	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
+	httpMux.HandleFunc("/", gateway.GetSourcetable).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", gateway.GetMount).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", gateway.PostMount).Methods("POST")
 
 	// This is probably fancier than it needs to be, could really just have a GetLogger function so we don't have to cast when pulling out the logger
 	// Perhaps a mix of both makes sense, where the UUID is added to context, but you generate a logger from the Request (which includes the context) when you need it
@@ -81,13 +81,13 @@ func (caster *Caster) Serve() error {
 	})
 
 	log.Info("server starting")
-	return http.ListenAndServe(":" + caster.Port, httpMux)
+	return http.ListenAndServe(":" + gateway.Port, httpMux)
 }
 
-// GetSourcetable serves caster and mount information in NTRIP Sourcetable format
-func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s\r\n", caster)
-	for _, mount := range caster.Mounts {
+// GetSourcetable serves gateway and mount information in NTRIP Sourcetable format
+func (gateway *Gateway) GetSourcetable(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s\r\n", gateway)
+	for _, mount := range gateway.Mounts {
 		//TODO: Make timeout configurable and make the following if statement a method of Mount
 		if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
 			fmt.Fprintf(w, "%s\r\n", mount)
@@ -98,11 +98,11 @@ func (caster *Caster) GetSourcetable(w http.ResponseWriter, r *http.Request) {
 
 // GetMount handles GET requests for Mounts, establishing an MQTT client and
 // subscription for each request and streaming the data back to the client
-func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
+func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Check if mountpoint exists
-	mount, exists := caster.Mounts[r.URL.Path[1:]]
+	mount, exists := gateway.Mounts[r.URL.Path[1:]]
 	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
 		logger.Info("no existing mountpoint")
 		w.WriteHeader(http.StatusNotFound)
@@ -110,7 +110,7 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create MQTT client connection on behalf of HTTP user
-	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
+	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -151,14 +151,14 @@ func (caster *Caster) GetMount(w http.ResponseWriter, r *http.Request) {
 
 // PostMount handles POST requests to a Mount, parsing the stream as RTCM and
 // forwarding to MQTT broker
-// TODO: Currently not checking if the mount is in caster.Mounts or if it's
+// TODO: Currently not checking if the mount is in gateway.Mounts or if it's
 // currently up, so can have multiple publishers on the same topic. I don't
 // know if there's a reasonable way to avoid this besides consulting LastMessage
-func (caster *Caster) PostMount(w http.ResponseWriter, r *http.Request) {
+func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Create MQTT client connection on behalf of HTTP user
-	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
+	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
