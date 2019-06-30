@@ -59,11 +59,11 @@ func (gateway *Gateway) AddMount(mount *Mount) error {
 	token := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
 		mount.LastMessage = time.Now()
 	})
-	//token.Wait()
+	token.Wait()
 	return token.Error()
 }
 
-// Serve runs HTTP server on Gateway.Port
+// Serve runs NTRIP server on Gateway.Port
 func (gateway *Gateway) Serve() error {
 	httpMux := mux.NewRouter()
 	httpMux.HandleFunc("/", gateway.GetSourcetable).Methods("GET")
@@ -77,12 +77,14 @@ func (gateway *Gateway) Serve() error {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestId := uuid.New().String()
 			ctx := context.WithValue(r.Context(), "UUID", requestId)
-			ctx = context.WithValue(ctx, "logger", log.WithFields(log.Fields{
+			logger := log.WithFields(log.Fields{
 				"request_id": requestId,
 				"path":       r.URL.Path,
 				"method":     r.Method,
 				"source_ip":  r.RemoteAddr,
-			}))
+			})
+			ctx = context.WithValue(ctx, "logger", logger)
+			logger.Debug("request received")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
