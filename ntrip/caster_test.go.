@@ -1,0 +1,10 @@
+package ntrip_test
+
+import (
+	"github.com/geoscienceaustralia/gnss-mqtt/ntrip"
+	"testing"
+)
+
+func TestFoo(test *testing.T) {
+	test.Error(ntrip.Caster{})
+}
