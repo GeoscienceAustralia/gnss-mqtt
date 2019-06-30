@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Gateway contains global configuration for handling connections and constructing sourcetable
+// Gateway receives NTRIP connections and forwards to MQTT
 type Gateway struct { // Gateway might be a misnomer since this isn't strictly a broadcast server
 	Port       string
 	Hostname   string // TODO: Lookup?
