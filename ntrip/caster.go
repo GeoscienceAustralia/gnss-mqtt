@@ -7,6 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+	"context"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 // Caster contains global configuration for handling connections and constructing sourcetable
@@ -30,6 +33,55 @@ type Caster struct { // Caster might be a misnomer since this isn't strictly a b
 func (caster *Caster) String() string {
 	return fmt.Sprintf("CAS;%s;%s;%s;%s;0;%s;0;0;;",
 		caster.Hostname, caster.Port, caster.Identifier, caster.Operator, caster.Country)
+}
+
+func (caster *Caster) Serve() error {
+	{ // This could probably all be defined in NewMount
+		// Watcher subscriptions update LastReceived attribute on Mount objects so 404s and timeouts can be implemented
+		// TODO: Create these subscriptions on initialization of / changes to config
+		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(caster.Broker))
+		if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
+			log.Fatal("failed to create MQTT client - " + token.Error().Error())
+		}
+		defer mqttClient.Disconnect(100)
+
+		// There should be no harm in just resubscribing for all mounts on any change to config
+		for _, mount := range caster.Mounts {
+			go func(mount *Mount) { // This doesn't need to be a function, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
+				token := mqttClient.Subscribe(mount.Name + "/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+					mount.LastMessage = time.Now()
+				})
+				if token.Wait() && token.Error() != nil {
+					log.Fatal("MQTT subscription failed - " + token.Error().Error()) // Should this be fatal?
+				}
+			}(mount)
+		}
+	}
+
+	httpMux := mux.NewRouter()
+	httpMux.HandleFunc("/", caster.GetSourcetable).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", caster.GetMount).Methods("GET")
+	httpMux.HandleFunc("/{mountpoint}", caster.PostMount).Methods("POST")
+
+	// This is probably fancier than it needs to be, could really just have a GetLogger function so we don't have to cast when pulling out the logger
+	// Perhaps a mix of both makes sense, where the UUID is added to context, but you generate a logger from the Request (which includes the context) when you need it
+	// One benefit of defining the logger in the Context is that it can be appended to
+	httpMux.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestId := uuid.New().String()
+			ctx := context.WithValue(r.Context(), "UUID", requestId)
+			ctx = context.WithValue(ctx, "logger", log.WithFields(log.Fields{
+				"request_id": requestId,
+				"path":       r.URL.Path,
+				"method":     r.Method,
+				"source_ip":  r.RemoteAddr,
+			}))
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
+
+	log.Info("server starting")
+	return http.ListenAndServe(":" + caster.Port, httpMux)
 }
 
 // GetSourcetable serves caster and mount information in NTRIP Sourcetable format

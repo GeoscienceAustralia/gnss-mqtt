@@ -14,6 +14,7 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/aws/aws-sdk-go v1.15.27/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.15.57/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.17.9/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
+github.com/bamiaux/iobit v0.0.0-20170418073505-498159a04883 h1:XNtOMwxmV2PI/vuTHDZnFzGIFNUh8MK73q7+Kna7AXs=
 github.com/bamiaux/iobit v0.0.0-20170418073505-498159a04883/go.mod h1:9IjZnSQGh45J46HHS45pxuMJ6WFTtSXbaX0FoHDvxh8=
 github.com/benburkert/http v0.0.0-20140610191404-7b1c7d0a482c/go.mod h1:+Yvt6P282G+eLLgc8ZWjdO/UUlmxiF4X4OSVFeRxuVE=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -37,8 +38,14 @@ github.com/eclipse/paho.mqtt.golang v1.2.0/go.mod h1:H9keYFcgq3Qr5OUJm/JZI/i6U7j
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/geoscienceaustralia/gnss-mqtt v0.0.0-20190629044024-2452b97b1fef h1:p5fBhuxagnBdIN8QP0TFzi8bMJIy1uj3hoBbBCNnDgA=
+github.com/geoscienceaustralia/gnss-mqtt v0.0.0-20190630051626-58d3d49b0c1a h1:SHrQ5tMZowkKzjKk9lvovgOP43gTU8Oppk6t08wT8jY=
+github.com/geoscienceaustralia/gnss-mqtt v0.0.0-20190630051626-58d3d49b0c1a/go.mod h1:hh+uLS+3E3wAIb/LQbcN6ZkoQzvPGvV8zw/J81q3174=
+github.com/geoscienceaustralia/gnss-mqtt/cmd/ntripgateway v0.0.0-20190630052335-34bd0ef2ef1f/go.mod h1:VXSjBKmd3EbgAsJVnh75ywTzcPOkBpzpPV+szq22WKA=
 github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630051626-58d3d49b0c1a h1:/G7UWRxaq+gjT578D+8Ko/x8O5lgAYfguY2prUEfiD8=
 github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630051626-58d3d49b0c1a/go.mod h1:UFX7fz4azAqEVIJksMQCs9elSH3CT/BgVOIfz2k7x8A=
+github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630052335-34bd0ef2ef1f h1:IYdXZ6K/1CGMv2P8V9jTEklYLPec5eXAHwtN0jL1Pyw=
+github.com/geoscienceaustralia/gnss-mqtt/ntrip v0.0.0-20190630052335-34bd0ef2ef1f/go.mod h1:dCO/wrFC3yk9f5nmeeiPQ97So/dd9QLSeRLFI/IVP6k=
+github.com/geoscienceaustralia/go-rtcm v0.0.0-20190613105737-2dc151e09ca6 h1:DHNMYMSJngYb/TjuX7N5A+XwxY90TdnT4qklFG3r1Hg=
 github.com/geoscienceaustralia/go-rtcm v0.0.0-20190613105737-2dc151e09ca6/go.mod h1:XkXO0oKbH33Z4WIrRtrX1fQ3JW5zo2WY5bmUJwa/00U=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-ini/ini v1.25.4/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
@@ -71,6 +78,8 @@ github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/mux v1.7.2 h1:zoNxOV7WjqXptQOVngLmcSQgXmgk4NMz1HibBchjl/I=
 github.com/gorilla/mux v1.7.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
+github.com/gorilla/mux v1.7.3 h1:gnP5JzjVOuiZD07fKKToCAOjS0yOpj/qPETTXCCS6hw=
+github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
