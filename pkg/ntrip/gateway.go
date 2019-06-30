@@ -1,21 +1,21 @@
 package ntrip
 
 import (
+	"context"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
-	"context"
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 )
 
 // Gateway receives NTRIP connections and forwards to MQTT
-type Gateway struct { // Gateway might be a misnomer since this isn't strictly a broadcast server
+type Gateway struct {
 	Port       string
-	Hostname   string // TODO: Lookup?
+	Hostname   string
 	Identifier string
 	Operator   string
 	//	NMEA       bool
@@ -25,8 +25,24 @@ type Gateway struct { // Gateway might be a misnomer since this isn't strictly a
 	//	Fallback   string
 	//	FallbackIP string
 	//	Misc       string
-	Mounts map[string]*Mount
-	Broker string
+	Mounts     map[string]*Mount
+	Broker     string
+	MQTTClient mqtt.Client
+}
+
+func NewGateway(port, hostname, identifier, operator, country, broker string) (gateway Gateway, err error) {
+	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	token := mqttClient.Connect(); token.Wait()
+	return Gateway{
+		Port:       port,
+		Hostname:   hostname,
+		Identifier: identifier,
+		Operator:   operator,
+		Country:    country,
+		Mounts:     map[string]*Mount{},
+		Broker:     broker,
+		MQTTClient: mqttClient,
+	}, token.Error()
 }
 
 // String representation of Gateway in NTRIP Sourcetable entry format
@@ -35,29 +51,20 @@ func (gateway *Gateway) String() string {
 		gateway.Hostname, gateway.Port, gateway.Identifier, gateway.Operator, gateway.Country)
 }
 
+// AddMount adds Mount to Gateway and creates watcher subscription for 
+// updating LastMessage
+// This will cause a runtime error if Gateway.MQTTClient is not defined
+func (gateway *Gateway) AddMount(mount *Mount) error {
+	gateway.Mounts[mount.Name] = mount
+	token := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+		mount.LastMessage = time.Now()
+	})
+	//token.Wait()
+	return token.Error()
+}
+
+// Serve runs HTTP server on Gateway.Port
 func (gateway *Gateway) Serve() error {
-	{ // This could probably all be defined in NewMount
-		// Watcher subscriptions update LastReceived attribute on Mount objects so 404s and timeouts can be implemented
-		// TODO: Create these subscriptions on initialization of / changes to config
-		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
-		if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
-			log.Fatal("failed to create MQTT client - " + token.Error().Error())
-		}
-		defer mqttClient.Disconnect(100)
-
-		// There should be no harm in just resubscribing for all mounts on any change to config
-		for _, mount := range gateway.Mounts {
-			go func(mount *Mount) { // This doesn't need to be a function, but mount does need to be copied so the anonymous function passed to Subscribe isn't a closure referencing the for loop's mount variable
-				token := mqttClient.Subscribe(mount.Name + "/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-					mount.LastMessage = time.Now()
-				})
-				if token.Wait() && token.Error() != nil {
-					log.Fatal("MQTT subscription failed - " + token.Error().Error()) // Should this be fatal?
-				}
-			}(mount)
-		}
-	}
-
 	httpMux := mux.NewRouter()
 	httpMux.HandleFunc("/", gateway.GetSourcetable).Methods("GET")
 	httpMux.HandleFunc("/{mountpoint}", gateway.GetMount).Methods("GET")
@@ -81,7 +88,7 @@ func (gateway *Gateway) Serve() error {
 	})
 
 	log.Info("server starting")
-	return http.ListenAndServe(":" + gateway.Port, httpMux)
+	return http.ListenAndServe(":"+gateway.Port, httpMux)
 }
 
 // GetSourcetable serves gateway and mount information in NTRIP Sourcetable format
@@ -103,7 +110,7 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 
 	// Check if mountpoint exists
 	mount, exists := gateway.Mounts[r.URL.Path[1:]]
-	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second * 3)) {
+	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
 		logger.Info("no existing mountpoint")
 		w.WriteHeader(http.StatusNotFound)
 		return
