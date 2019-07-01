@@ -1,4 +1,4 @@
-package ntrip_test
+package ntripmqtt_test
 
 import (
 	"github.com/surgemq/surgemq/service"

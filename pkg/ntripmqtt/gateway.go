@@ -1,4 +1,4 @@
-package ntrip
+package ntripmqtt
 
 import (
 	"context"
@@ -30,15 +30,12 @@ type Gateway struct {
 	MQTTClient mqtt.Client
 }
 
-func NewGateway(port, hostname, identifier, operator, country, broker string) (gateway Gateway, err error) {
+// NewGateway constructs a gateway object, adding a MQTT client
+func NewGateway(port, broker string) (gateway Gateway, err error) {
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
 	token := mqttClient.Connect(); token.Wait()
 	return Gateway{
 		Port:       port,
-		Hostname:   hostname,
-		Identifier: identifier,
-		Operator:   operator,
-		Country:    country,
 		Mounts:     map[string]*Mount{},
 		Broker:     broker,
 		MQTTClient: mqttClient,
