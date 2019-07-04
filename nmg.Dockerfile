@@ -8,12 +8,13 @@ RUN go mod download
 
 # Build statically linked binary
 COPY . .
-RUN cd cmd/ntrip-mqtt-gateway
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build .
+# Should be able to cd into cmd and build from there, but having issues with the module not being found
+RUN mv cmd/ntrip-mqtt-gateway/nmg.go .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ntrip-mqtt-gateway
 
 
 # Copy binary into scratch image
 FROM scratch
-COPY --from=builder /cmd/ntrip-mqtt-gateway/ntrip-mqtt-gateway /ntrip-mqtt-gateway
+COPY --from=builder /ntrip-mqtt-gateway /ntrip-mqtt-gateway
 EXPOSE 2101
 CMD ["/ntrip-mqtt-gateway"]
