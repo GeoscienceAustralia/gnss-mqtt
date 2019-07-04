@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: ng
-        image: geoscienceaustralia/ntripgateway:0.6
+        image: geoscienceaustralia/ntrip-mqtt-gateway:latest
         ports:
         - containerPort: 2101
 ---
