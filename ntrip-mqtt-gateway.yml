@@ -36,7 +36,3 @@ spec:
   ports:
   - port: 2101
     name: ntrip
-  - protocol: TCP
-    port: 443
-    targetPort: 2101
-    name: ntripssl
