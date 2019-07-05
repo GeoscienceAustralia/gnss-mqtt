@@ -14,6 +14,8 @@ let
     erlang
     rebar3
     elixir
+    docker
+    docker-compose
   ];
 
   env = pkgs.buildEnv {
