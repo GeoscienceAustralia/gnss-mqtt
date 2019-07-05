@@ -6,7 +6,6 @@ let
   projectName = "gnss-mqtt";
 
   buildTools = with pkgs; [
-    terraform
     aws-iam-authenticator
     google-cloud-sdk
     kubectl
