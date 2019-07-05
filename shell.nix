@@ -12,6 +12,9 @@ let
     kubectl
     mosquitto
     go_1_12
+    erlang
+    rebar3
+    elixir
   ];
 
   env = pkgs.buildEnv {
