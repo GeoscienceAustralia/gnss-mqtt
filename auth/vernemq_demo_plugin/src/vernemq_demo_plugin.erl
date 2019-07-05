@@ -24,14 +24,12 @@
 auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberId, UserName, Password, CleanSession) ->
     error_logger:info_msg("auth_on_register: ~p ~p ~p ~p ~p", [Peer, SubscriberId, UserName, Password, CleanSession]),
 
-    AwsAccessKeyId = os:getenv("AWS_ACCESS_KEY_ID"),
-    AwsSecretAccessKey = os:getenv("AWS_SECRET_ACCESS_KEY"),
-    error_logger:info_msg("~p ~p", [AwsAccessKeyId, AwsSecretAccessKey]),
-    Client = aws_client:make_client(list_to_binary(AwsAccessKeyId), list_to_binary(AwsSecretAccessKey), <<"ap-southeast-2">>),
+    Client = aws_client:make_client(<<>>, <<>>, <<"ap-southeast-2">>),
 
-    UserPoolId = os:getenv("COGNITO_USER_POOL_ID"),
-    ClientId = os:getenv("COGNITO_CLIENT_ID"),
-    Login = aws_cognito_idp:admin_initiate_auth(Client, #{<<"UserPoolId">> => list_to_binary(UserPoolId), <<"ClientId">> => list_to_binary(ClientId), <<"AuthFlow">> => <<"ADMIN_NO_SRP_AUTH">>, <<"AuthParameters">> => #{<<"USERNAME">> => UserName, <<"PASSWORD">> => Password}}, []),
+    Login = aws_cognito_idp:initiate_auth(Client, #{<<"AuthFlow">> => <<"USER_PASSWORD_AUTH">>,
+                                                    <<"ClientId">> => <<"5ltsi83d284v80775qvv46l370">>,
+                                                    <<"AuthParameters">> => #{<<"USERNAME">> => UserName,
+                                                                              <<"PASSWORD">> => Password}}, []),
     case Login of
         {ok, _, _} -> ok;
         {error, _, _} -> error;
