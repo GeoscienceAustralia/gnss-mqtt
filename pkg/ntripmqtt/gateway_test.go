@@ -1,8 +1,8 @@
 package ntripmqtt_test
 
 import (
-	"github.com/surgemq/surgemq/service"
 	"github.com/geoscienceaustralia/gnss-mqtt/pkg/ntripmqtt"
+	"github.com/surgemq/surgemq/service"
 	"testing"
 )
 

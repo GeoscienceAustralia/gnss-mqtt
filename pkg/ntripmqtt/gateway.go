@@ -9,8 +9,8 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 )
 
 // Gateway receives NTRIP connections and forwards to MQTT
@@ -34,9 +34,8 @@ type Gateway struct {
 // NewGateway constructs a gateway object, adding a MQTT client
 func NewGateway(port, broker string) (gateway *Gateway, err error) {
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
-	connectToken := mqttClient.Connect()
-	if connectToken.Wait() && connectToken.Error() != nil {
-		return gateway, connectToken.Error()
+	if connToken := mqttClient.Connect(); connToken.Wait() && connToken.Error() != nil {
+		return gateway, connToken.Error()
 	}
 
 	gateway = &Gateway{
@@ -79,12 +78,12 @@ func (gateway *Gateway) Serve() error {
 	// One benefit of defining the logger in the Context is that it can be appended to
 	httpMux.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestId := uuid.New().String()
-			w.Header().Add("Request-Id", requestId)
+			requestID := uuid.New().String()
+			w.Header().Add("Request-Id", requestID)
 
-			ctx := context.WithValue(r.Context(), "UUID", requestId)
+			ctx := context.WithValue(r.Context(), "UUID", requestID)
 			logger := log.WithFields(log.Fields{
-				"request_id": requestId,
+				"request_id": requestID,
 				"path":       r.URL.Path,
 				"method":     r.Method,
 				"source_ip":  r.RemoteAddr,

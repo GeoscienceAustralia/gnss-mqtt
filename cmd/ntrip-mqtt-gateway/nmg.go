@@ -1,8 +1,8 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/geoscienceaustralia/gnss-mqtt/pkg/ntripmqtt"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
