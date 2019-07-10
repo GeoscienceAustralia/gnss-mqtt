@@ -33,7 +33,7 @@ type Mount struct {
 // String representation of Mount in NTRIP Sourcetable entry format
 func (mount *Mount) String() string {
 	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;0;0;%s;none;N;N;0;%s",
-		mount.Name, mount.Identifier, mount.Format, mount.FormatDetails, mount.Carrier,
+		mount.Name, mount.Identifier, "RTCM 3", mount.FormatDetails, mount.Carrier,
 		mount.NavSystem, mount.Network, mount.CountryCode, mount.Latitude, mount.Longitude,
 		mount.Generator, mount.Misc)
 }

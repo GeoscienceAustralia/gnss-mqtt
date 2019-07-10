@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+	"strings"
 )
 
 // Gateway receives NTRIP connections and forwards to MQTT
@@ -31,33 +32,39 @@ type Gateway struct {
 }
 
 // NewGateway constructs a gateway object, adding a MQTT client
-func NewGateway(port, broker string) (gateway Gateway, err error) {
+func NewGateway(port, broker string) (gateway *Gateway, err error) {
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
-	token := mqttClient.Connect(); token.Wait()
-	return Gateway{
+	connectToken := mqttClient.Connect()
+	if connectToken.Wait() && connectToken.Error() != nil {
+		return gateway, connectToken.Error()
+	}
+
+	gateway = &Gateway{
 		Port:       port,
 		Mounts:     map[string]*Mount{},
 		Broker:     broker,
 		MQTTClient: mqttClient,
-	}, token.Error()
+	}
+
+	// This could probably wait until Serving
+	subToken := gateway.MQTTClient.Subscribe("#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+		// Assumes topic structure of "<mount_name>/<message_number>".
+		name := strings.Split(msg.Topic(), "/")[0]
+		if mount, exists := gateway.Mounts[name]; exists {
+			mount.LastMessage = time.Now()
+		} else {
+			gateway.Mounts[name] = &Mount{Name: name, LastMessage: time.Now()}
+		}
+	})
+	subToken.Wait()
+
+	return gateway, subToken.Error()
 }
 
 // String representation of Gateway in NTRIP Sourcetable entry format
 func (gateway *Gateway) String() string {
 	return fmt.Sprintf("CAS;%s;%s;%s;%s;0;%s;0;0;;",
 		gateway.Hostname, gateway.Port, gateway.Identifier, gateway.Operator, gateway.Country)
-}
-
-// AddMount adds Mount to Gateway and creates watcher subscription for 
-// updating LastMessage
-// This will cause a runtime error if Gateway.MQTTClient is not defined
-func (gateway *Gateway) AddMount(mount *Mount) error {
-	gateway.Mounts[mount.Name] = mount
-	token := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-		mount.LastMessage = time.Now()
-	})
-	token.Wait()
-	return token.Error()
 }
 
 // Serve runs NTRIP server on Gateway.Port
