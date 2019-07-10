@@ -84,6 +84,7 @@ metadata:
   labels:
     app: mqttlb
 spec:
+  externalTrafficPolicy: Local
   type: LoadBalancer
   selector:
     app: vernemq
