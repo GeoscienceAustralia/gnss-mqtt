@@ -7,6 +7,7 @@ import (
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
+	log.SetLevel(log.DebugLevel)
 
 	// TODO: Define from config file
 	gateway, err := ntripmqtt.NewGateway("2101", "tcp://mqtt.geops.team:443")

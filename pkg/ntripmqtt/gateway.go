@@ -80,6 +80,8 @@ func (gateway *Gateway) Serve() error {
 	httpMux.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestId := uuid.New().String()
+			w.Header().Add("Request-Id", requestId)
+
 			ctx := context.WithValue(r.Context(), "UUID", requestId)
 			logger := log.WithFields(log.Fields{
 				"request_id": requestId,
@@ -89,6 +91,7 @@ func (gateway *Gateway) Serve() error {
 			})
 			ctx = context.WithValue(ctx, "logger", logger)
 			logger.Debug("request received")
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
