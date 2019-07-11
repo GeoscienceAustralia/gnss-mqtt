@@ -6,8 +6,8 @@ import (
 )
 
 // Mount represents a NTRIP mountpoint which proxies through to an MQTT topic
-// TODO: Clients could subscribe to a Mount so each client doesn't need a MQTT connection - less load on MQTT broker, but maybe not necessary
-// TODO: Handle concurrent writes to Mount using a lock, concurrent writes to LastMessage could break
+// TODO: Figure out how to populate unknown attributes in a dynamic way, this
+// could involve GeodesyML / parsing the stream content
 type Mount struct {
 	Name          string
 	Identifier    string // meta
