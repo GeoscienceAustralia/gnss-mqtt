@@ -185,7 +185,7 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	w.(http.Flusher).Flush()
 	logger.Info("client connected")
 
-	// Scan POSTed data for RTCM messages and publish with MQTT client
+	// Scan POSTed data for RTCM messages and publish with MQTT client - This will do nothing if the stream does not contain RTCM data
 	scanner := rtcm3.NewScanner(r.Body)
 	rtcmFrame, err := scanner.NextFrame()
 	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {

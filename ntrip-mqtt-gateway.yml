@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: nmg
-        image: geoscienceaustralia/ntrip-mqtt-gateway:0.1
+        image: geoscienceaustralia/ntrip-mqtt-gateway:dynamic
         ports:
         - containerPort: 2101
 ---
