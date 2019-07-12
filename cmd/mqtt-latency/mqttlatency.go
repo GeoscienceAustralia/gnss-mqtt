@@ -15,11 +15,11 @@ func main() {
 
 	opts := mqtt.NewClientOptions().AddBroker(*broker)
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, mqttmsg mqtt.Message) {
-		msg := rtcm3.DeserializeMessage(mqttmsg.Payload())
+		msg := rtcm3.DeserializeMessage(mqttmsg.Payload()) // DeserializeMessage should return error
 		if obs, ok := msg.(rtcm3.Observable); ok {
-			fmt.Println(msg.Number(), time.Now().UTC().Sub(obs.Time()))
+			fmt.Println(mqttmsg.Topic(), msg.Number(), time.Now().UTC().Sub(obs.Time()))
 		} else {
-			fmt.Println(msg.Number())
+			fmt.Println(mqttmsg.Topic(), msg.Number())
 		}
 	})
 

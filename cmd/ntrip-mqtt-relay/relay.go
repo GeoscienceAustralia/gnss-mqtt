@@ -32,7 +32,7 @@ func main() {
 	for ; ; time.Sleep(time.Second * *timeout) {
 		resp, err := ntripClient.Connect()
 		if err != nil || resp.StatusCode != 200 {
-			fmt.Println("NTRIP client failed to connect -", resp.StatusCode, err)
+			fmt.Println("NTRIP client failed to connect -", resp, err)
 			continue
 		}
 
