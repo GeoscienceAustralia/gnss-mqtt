@@ -29,18 +29,19 @@ func main() {
 	ntripClient, _ := ntrip.NewClient(*source)
 	ntripClient.SetBasicAuth(*username, *password)
 
-	for ; ; time.Sleep(time.Second * *timeout) {
+	for ; ; time.Sleep(*timeout) {
 		resp, err := ntripClient.Connect()
 		if err != nil || resp.StatusCode != 200 {
 			fmt.Println("NTRIP client failed to connect -", resp, err)
 			continue
 		}
+		fmt.Println("NTRIP client connected")
 
 		scanner := rtcm3.NewScanner(resp.Body)
 		for msg, err := scanner.Next(); err == nil; msg, err = scanner.Next() {
 			mqttClient.Publish(fmt.Sprintf("%s/%d", *topic, msg.Number()), 1, false, msg.Serialize())
 		}
 
-		fmt.Println("NTRIP client connection died -", err)
+		fmt.Println("NTRIP client disconnected -", err)
 	}
 }
