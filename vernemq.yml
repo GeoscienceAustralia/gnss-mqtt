@@ -28,16 +28,8 @@ spec:
           name: epmd
         - containerPort: 44053
           name: vmq
-        - containerPort: 9100
-        - containerPort: 9101
-        - containerPort: 9102
-        - containerPort: 9103
-        - containerPort: 9104
-        - containerPort: 9105
-        - containerPort: 9106
-        - containerPort: 9107
-        - containerPort: 9108
-        - containerPort: 9109
+        - containerPort: 8888
+          name: console
         env:
         - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
           value: "1"
@@ -83,6 +75,8 @@ metadata:
   name: mqttlb
   labels:
     app: mqttlb
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
@@ -95,6 +89,9 @@ spec:
     port: 443
     targetPort: 1883
     name: mqttlbssl
+  - port: 80
+    targetPort: 8888
+    name: console
 ---
 apiVersion: v1
 kind: Service

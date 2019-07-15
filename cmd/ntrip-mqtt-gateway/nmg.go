@@ -10,7 +10,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	// TODO: Define from config file
-	gateway, err := ntripmqtt.NewGateway("2101", "tcp://mqtt.geops.team:443")
+	gateway, err := ntripmqtt.NewGateway("2101", "tcp://vernemq:443")
 	if err != nil {
 		log.Fatal(err)
 	}
