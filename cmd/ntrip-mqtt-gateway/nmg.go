@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	gateway.Hostname = "streams.geops.team"
+	gateway.Hostname = "ntrip.geops.team"
 	gateway.Operator = "Geoscience Australia"
 
 	log.Fatal(gateway.Serve())

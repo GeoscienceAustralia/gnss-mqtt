@@ -17,9 +17,9 @@ func main() {
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, mqttmsg mqtt.Message) {
 		msg := rtcm3.DeserializeMessage(mqttmsg.Payload()) // DeserializeMessage should return error
 		if obs, ok := msg.(rtcm3.Observable); ok {
-			fmt.Println(mqttmsg.Topic(), obs.Number(), time.Now().UTC().Sub(obs.Time()))
+			fmt.Println(time.Now().Format("2006-01-02T15:04:05.999999"), mqttmsg.Topic(), obs.Number(), len(mqttmsg.Payload()), time.Now().UTC().Sub(obs.Time()))
 		} else {
-			fmt.Println(mqttmsg.Topic(), msg.Number())
+			fmt.Println(time.Now().Format("2006-01-02T15:04:05.999999"), mqttmsg.Topic(), msg.Number(), len(mqttmsg.Payload()))
 		}
 	})
 

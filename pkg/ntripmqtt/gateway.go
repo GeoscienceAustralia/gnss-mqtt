@@ -33,7 +33,11 @@ type Gateway struct {
 
 // NewGateway constructs a gateway object, adding a MQTT client
 func NewGateway(port, broker string) (gateway *Gateway, err error) {
-	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
+	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(broker).
+		SetClientID(uuid.New().String()).
+		SetCleanSession(false))
+
 	if connToken := mqttClient.Connect(); connToken.Wait() && connToken.Error() != nil {
 		return gateway, connToken.Error()
 	}
@@ -81,7 +85,7 @@ func (gateway *Gateway) Serve() error {
 			requestID := uuid.New().String()
 			w.Header().Add("Request-Id", requestID)
 
-			ctx := context.WithValue(r.Context(), "UUID", requestID)
+			ctx := context.WithValue(r.Context(), "uuid", requestID)
 			logger := log.WithFields(log.Fields{
 				"request_id": requestID,
 				"path":       r.URL.Path,
@@ -125,7 +129,11 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create MQTT client connection on behalf of HTTP user
-	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
+	subClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(gateway.Broker).
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
+
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -173,7 +181,11 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Create MQTT client connection on behalf of HTTP user
-	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
+	pubClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(gateway.Broker).
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
+
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
