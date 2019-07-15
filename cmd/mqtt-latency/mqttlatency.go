@@ -13,7 +13,11 @@ func main() {
 	topic := flag.String("topic", "#", "")
 	flag.Parse()
 
-	opts := mqtt.NewClientOptions().AddBroker(*broker)
+	opts := mqtt.NewClientOptions().
+		AddBroker(*broker).
+		SetCleanSession(false).
+		SetClientID("mqtt-latency")
+
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, mqttmsg mqtt.Message) {
 		msg := rtcm3.DeserializeMessage(mqttmsg.Payload()) // DeserializeMessage should return error
 		if obs, ok := msg.(rtcm3.Observable); ok {

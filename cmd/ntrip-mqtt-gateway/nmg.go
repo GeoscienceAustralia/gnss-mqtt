@@ -7,10 +7,10 @@ import (
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.ErrorLevel)
 
 	// TODO: Define from config file
-	gateway, err := ntripmqtt.NewGateway("2101", "tcp://vernemq:443")
+	gateway, err := ntripmqtt.NewGateway("2101", "tcp://vernemq:1883")
 	if err != nil {
 		log.Fatal(err)
 	}
