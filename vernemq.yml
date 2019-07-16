@@ -40,7 +40,6 @@ spec:
         - containerPort: 9107
         - containerPort: 9108
         - containerPort: 9109
-
         env:
         - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
           value: "1"
@@ -62,6 +61,14 @@ spec:
           value: "1"
         # only allow anonymous access for development / testing purposes!
         - name: DOCKER_VERNEMQ_ALLOW_ANONYMOUS
+          value: "on"
+        - name: DOCKER_VERNEMQ_ALLOW_REGISTER_DURING_NETSPLIT
+          value: "on"
+        - name: DOCKER_VERNEMQ_ALLOW_PUBLISH_DURING_NETSPLIT
+          value: "on"
+        - name: DOCKER_VERNEMQ_ALLOW_SUBSCRIBE_DURING_NETSPLIT
+          value: "on"
+        - name: DOCKER_VERNEMQ_ALLOW_UNSUBSCRIBE_DURING_NETSPLIT
           value: "on"
 ---
 apiVersion: v1
