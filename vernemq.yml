@@ -30,6 +30,17 @@ spec:
           name: vmq
         - containerPort: 8888
           name: console
+        - containerPort: 9100
+        - containerPort: 9101
+        - containerPort: 9102
+        - containerPort: 9103
+        - containerPort: 9104
+        - containerPort: 9105
+        - containerPort: 9106
+        - containerPort: 9107
+        - containerPort: 9108
+        - containerPort: 9109
+
         env:
         - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
           value: "1"

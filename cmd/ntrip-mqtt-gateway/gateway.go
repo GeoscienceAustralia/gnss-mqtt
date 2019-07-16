@@ -1,4 +1,4 @@
-package ntripmqtt
+package main
 
 import (
 	"context"

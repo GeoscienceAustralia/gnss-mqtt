@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/geoscienceaustralia/gnss-mqtt/pkg/ntripmqtt"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -10,7 +9,7 @@ func main() {
 	log.SetLevel(log.ErrorLevel)
 
 	// TODO: Define from config file
-	gateway, err := ntripmqtt.NewGateway("2101", "tcp://vernemq:1883")
+	gateway, err := NewGateway("2101", "tcp://vernemq:1883")
 	if err != nil {
 		log.Fatal(err)
 	}
