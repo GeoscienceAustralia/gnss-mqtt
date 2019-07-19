@@ -6,10 +6,10 @@ import (
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.ErrorLevel)
+	log.SetLevel(log.DebugLevel)
 
 	// TODO: Define from config file
-	gateway, err := NewGateway("2101", "tcp://vernemq:1883")
+	gateway, err := NewGateway("2101", "tcp://mqtt.geops.team:1883")
 	if err != nil {
 		log.Fatal(err)
 	}

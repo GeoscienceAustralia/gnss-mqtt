@@ -51,12 +51,13 @@ func NewGateway(port, broker string) (gateway *Gateway, err error) {
 
 	// This could probably wait until Serving - Assumes topic structure of "<mount_name>/<message_number>"
 	subToken := gateway.MQTTClient.Subscribe("#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-		name := strings.Split(msg.Topic(), "/")[0]
+		topic := strings.Split(msg.Topic(), "/")
 		// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
-		if mount, exists := gateway.Mounts[name]; exists {
+		if mount, exists := gateway.Mounts[topic[0]]; exists {
 			mount.LastMessage = time.Now()
+			mount.FormatDetails[topic[1]] = true
 		} else {
-			gateway.Mounts[name] = &Mount{Name: name, LastMessage: time.Now()}
+			gateway.Mounts[topic[0]] = &Mount{Name: topic[0], LastMessage: time.Now(), FormatDetails: map[string]bool{}}
 		}
 	})
 	subToken.Wait()

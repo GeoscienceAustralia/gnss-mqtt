@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -12,13 +13,13 @@ type Mount struct {
 	Name          string
 	Identifier    string // meta
 	Format        string // stream - minor version doesn't really matter since RTCM3 is strictly additive
-	FormatDetails string // stream
+	FormatDetails FormatDetails // stream
 	Carrier       string // stream
 	NavSystem     string // stream
 	Network       string // meta
 	CountryCode   string // meta
-	Latitude      string // meta / stream
-	Longitude     string // meta / stream
+	Latitude      string // meta
+	Longitude     string // meta
 	//	NMEA           bool
 	//	Solution       bool
 	Generator string // stream
@@ -36,4 +37,15 @@ func (mount *Mount) String() string {
 		mount.Name, mount.Identifier, "RTCM 3", mount.FormatDetails, mount.Carrier,
 		mount.NavSystem, mount.Network, mount.CountryCode, mount.Latitude, mount.Longitude,
 		mount.Generator, mount.Misc)
+}
+
+// Implementing as map to force uniqueness without having to check elements in a list
+type FormatDetails map[string]bool
+
+func (fd FormatDetails) String() string {
+	messages := []string{}
+	for message, _ := range fd {
+		messages = append(messages, message)
+	}
+	return strings.Join(messages, ",")
 }
