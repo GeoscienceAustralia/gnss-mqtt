@@ -1,4 +1,4 @@
-package ntripmqtt
+package main
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -31,33 +32,42 @@ type Gateway struct {
 }
 
 // NewGateway constructs a gateway object, adding a MQTT client
-func NewGateway(port, broker string) (gateway Gateway, err error) {
-	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(broker))
-	token := mqttClient.Connect(); token.Wait()
-	return Gateway{
+func NewGateway(port, broker string) (gateway *Gateway, err error) {
+	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(broker).
+		SetClientID(uuid.New().String()).
+		SetCleanSession(false))
+
+	if connToken := mqttClient.Connect(); connToken.Wait() && connToken.Error() != nil {
+		return gateway, connToken.Error()
+	}
+
+	gateway = &Gateway{
 		Port:       port,
 		Mounts:     map[string]*Mount{},
 		Broker:     broker,
 		MQTTClient: mqttClient,
-	}, token.Error()
+	}
+
+	// This could probably wait until Serving - Assumes topic structure of "<mount_name>/<message_number>"
+	subToken := gateway.MQTTClient.Subscribe("#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+		name := strings.Split(msg.Topic(), "/")[0]
+		// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
+		if mount, exists := gateway.Mounts[name]; exists {
+			mount.LastMessage = time.Now()
+		} else {
+			gateway.Mounts[name] = &Mount{Name: name, LastMessage: time.Now()}
+		}
+	})
+	subToken.Wait()
+
+	return gateway, subToken.Error()
 }
 
 // String representation of Gateway in NTRIP Sourcetable entry format
 func (gateway *Gateway) String() string {
 	return fmt.Sprintf("CAS;%s;%s;%s;%s;0;%s;0;0;;",
 		gateway.Hostname, gateway.Port, gateway.Identifier, gateway.Operator, gateway.Country)
-}
-
-// AddMount adds Mount to Gateway and creates watcher subscription for 
-// updating LastMessage
-// This will cause a runtime error if Gateway.MQTTClient is not defined
-func (gateway *Gateway) AddMount(mount *Mount) error {
-	gateway.Mounts[mount.Name] = mount
-	token := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-		mount.LastMessage = time.Now()
-	})
-	token.Wait()
-	return token.Error()
 }
 
 // Serve runs NTRIP server on Gateway.Port
@@ -72,16 +82,19 @@ func (gateway *Gateway) Serve() error {
 	// One benefit of defining the logger in the Context is that it can be appended to
 	httpMux.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestId := uuid.New().String()
-			ctx := context.WithValue(r.Context(), "UUID", requestId)
+			requestID := uuid.New().String()
+			w.Header().Add("Request-Id", requestID)
+
+			ctx := context.WithValue(r.Context(), "uuid", requestID)
 			logger := log.WithFields(log.Fields{
-				"request_id": requestId,
+				"request_id": requestID,
 				"path":       r.URL.Path,
 				"method":     r.Method,
 				"source_ip":  r.RemoteAddr,
 			})
 			ctx = context.WithValue(ctx, "logger", logger)
 			logger.Debug("request received")
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
@@ -116,7 +129,11 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create MQTT client connection on behalf of HTTP user
-	subClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
+	subClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(gateway.Broker).
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
+
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -164,7 +181,11 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 
 	// Create MQTT client connection on behalf of HTTP user
-	pubClient := mqtt.NewClient(mqtt.NewClientOptions().AddBroker(gateway.Broker))
+	pubClient := mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(gateway.Broker).
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
+
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -176,7 +197,7 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	w.(http.Flusher).Flush()
 	logger.Info("client connected")
 
-	// Scan POSTed data for RTCM messages and publish with MQTT client
+	// Scan POSTed data for RTCM messages and publish with MQTT client - This will do nothing if the stream does not contain RTCM data
 	scanner := rtcm3.NewScanner(r.Body)
 	rtcmFrame, err := scanner.NextFrame()
 	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {

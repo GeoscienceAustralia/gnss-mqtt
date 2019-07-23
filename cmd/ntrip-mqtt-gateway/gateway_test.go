@@ -1,8 +1,7 @@
-package ntripmqtt_test
+package main
 
 import (
 	"github.com/surgemq/surgemq/service"
-	"github.com/geoscienceaustralia/gnss-mqtt/pkg/ntripmqtt"
 	"testing"
 )
 
@@ -19,7 +18,7 @@ func TestGateway(t *testing.T) {
 	defer svr.Close()
 
 	// TODO: Mock mqtt broker
-	_, err := ntripmqtt.NewGateway("2101", "tcp://localhost:1883")
+	_, err := NewGateway("2101", "tcp://localhost:1883")
 	if err != nil {
 		t.Error(err)
 	}

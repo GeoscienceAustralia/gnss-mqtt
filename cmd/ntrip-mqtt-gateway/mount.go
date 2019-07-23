@@ -1,4 +1,4 @@
-package ntripmqtt
+package main
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 )
 
 // Mount represents a NTRIP mountpoint which proxies through to an MQTT topic
-// TODO: Clients could subscribe to a Mount so each client doesn't need a MQTT connection - less load on MQTT broker, but maybe not necessary
-// TODO: Handle concurrent writes to Mount using a lock, concurrent writes to LastMessage could break
+// TODO: Figure out how to populate unknown attributes in a dynamic way, this
+// could involve GeodesyML / parsing the stream content
 type Mount struct {
 	Name          string
 	Identifier    string // meta
@@ -33,7 +33,7 @@ type Mount struct {
 // String representation of Mount in NTRIP Sourcetable entry format
 func (mount *Mount) String() string {
 	return fmt.Sprintf("STR;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;0;0;%s;none;N;N;0;%s",
-		mount.Name, mount.Identifier, mount.Format, mount.FormatDetails, mount.Carrier,
+		mount.Name, mount.Identifier, "RTCM 3", mount.FormatDetails, mount.Carrier,
 		mount.NavSystem, mount.Network, mount.CountryCode, mount.Latitude, mount.Longitude,
 		mount.Generator, mount.Misc)
 }
