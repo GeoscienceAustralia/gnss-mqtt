@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.2.0
-	github.com/geoscienceaustralia/go-rtcm v0.0.0-20190712021824-99127907089f
+	github.com/geoscienceaustralia/go-rtcm v0.0.0-20190916034707-8aaa3b3210f6
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
 	github.com/sirupsen/logrus v1.4.2

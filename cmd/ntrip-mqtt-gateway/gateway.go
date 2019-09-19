@@ -144,8 +144,7 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	// Subscribe to MQTT topic and forward messages to channel
 	data := make(chan []byte)
 	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-		//TODO: Add an encapsulation method which takes []byte
-		data <- rtcm3.EncapsulateMessage(rtcm3.DeserializeMessage(msg.Payload())).Serialize()
+		data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
 	})
 	if token.Wait() && token.Error() != nil {
 		logger.Error("MQTT subscription failed - " + token.Error().Error())
@@ -160,7 +159,7 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 		select {
 		// Read data from MQTT channel and write to HTTP connection
 		case d := <-data:
-			fmt.Fprintf(w, "%s\r\n", d)
+			fmt.Fprintf(w, "%s", d)
 			w.(http.Flusher).Flush()
 		case <-r.Context().Done():
 			logger.Info("client disconnected")
