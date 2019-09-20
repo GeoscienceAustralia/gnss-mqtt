@@ -11,7 +11,7 @@ func main() {
 	flag.Parse()
 
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.ErrorLevel)
+	log.SetLevel(log.DebugLevel)
 
 	// TODO: Define from config file
 	gateway, err := NewGateway(*port, *broker)
