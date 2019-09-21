@@ -129,28 +129,25 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create MQTT client connection on behalf of HTTP user
+	data := make(chan []byte)
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().
 		AddBroker(gateway.Broker).
-		SetClientID(r.Context().Value("uuid").(string)).
-		SetCleanSession(false))
+		// Resubscribe on reconnection
+		SetOnConnectHandler(func(client mqtt.Client) {
+			token := client.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+				data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
+			})
+			if token.Wait() && token.Error() != nil {
+				logger.Error("MQTT subscription failed - " + token.Error().Error())
+			}
+		}))
 
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		return // TODO: log error
-	}
-	defer subClient.Disconnect(100)
-
-	// Subscribe to MQTT topic and forward messages to channel
-	data := make(chan []byte)
-	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-		data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
-	})
-	if token.Wait() && token.Error() != nil {
-		logger.Error("MQTT subscription failed - " + token.Error().Error())
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer subClient.Disconnect(100)
 
 	logger.Info("client connected")
 	w.(http.Flusher).Flush() // Return 200
@@ -181,9 +178,7 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 
 	// Create MQTT client connection on behalf of HTTP user
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().
-		AddBroker(gateway.Broker).
-		SetClientID(r.Context().Value("uuid").(string)).
-		SetCleanSession(false))
+		AddBroker(gateway.Broker))
 
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
