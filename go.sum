@@ -41,10 +41,6 @@ github.com/eclipse/paho.mqtt.golang v1.2.0/go.mod h1:H9keYFcgq3Qr5OUJm/JZI/i6U7j
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
-github.com/geoscienceaustralia/go-rtcm v0.0.0-20190630061356-cb8eaf2ecccb h1:MPWkAPm7aa6x5LXIVG6Yrvw6wsIUfrk0rnmfJAOhlbY=
-github.com/geoscienceaustralia/go-rtcm v0.0.0-20190630061356-cb8eaf2ecccb/go.mod h1:XkXO0oKbH33Z4WIrRtrX1fQ3JW5zo2WY5bmUJwa/00U=
-github.com/geoscienceaustralia/go-rtcm v0.0.0-20190712021824-99127907089f h1:1aE49P2q0uHUBJX3Qcdi90yE4nXmydpqd6w1TR79i1k=
-github.com/geoscienceaustralia/go-rtcm v0.0.0-20190712021824-99127907089f/go.mod h1:XkXO0oKbH33Z4WIrRtrX1fQ3JW5zo2WY5bmUJwa/00U=
 github.com/geoscienceaustralia/go-rtcm v0.0.0-20190916034707-8aaa3b3210f6 h1:BY8YqK50pvPuUUe9anigfeZvz54oOBI77romYyApxJI=
 github.com/geoscienceaustralia/go-rtcm v0.0.0-20190916034707-8aaa3b3210f6/go.mod h1:XkXO0oKbH33Z4WIrRtrX1fQ3JW5zo2WY5bmUJwa/00U=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
