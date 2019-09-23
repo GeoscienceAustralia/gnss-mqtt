@@ -132,6 +132,7 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	data := make(chan []byte)
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().
 		AddBroker(gateway.Broker).
+		SetOrderMatters(true).
 		// Resubscribe on reconnection
 		SetOnConnectHandler(func(client mqtt.Client) {
 			token := client.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
@@ -178,6 +179,7 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 
 	// Create MQTT client connection on behalf of HTTP user
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().
+		SetOrderMatters(true).
 		AddBroker(gateway.Broker))
 
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
