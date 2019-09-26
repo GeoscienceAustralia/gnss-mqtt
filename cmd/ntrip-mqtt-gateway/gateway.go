@@ -36,6 +36,7 @@ func NewGateway(port, broker string) (gateway *Gateway, err error) {
 	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
 		AddBroker(broker).
 		SetClientID(uuid.New().String()).
+		SetMaxReconnectInterval(5 * time.Second).
 		SetCleanSession(false))
 
 	if connToken := mqttClient.Connect(); connToken.Wait() && connToken.Error() != nil {
@@ -132,15 +133,8 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	data := make(chan []byte)
 	subClient := mqtt.NewClient(mqtt.NewClientOptions().
 		AddBroker(gateway.Broker).
-		// Resubscribe on reconnection - could disable clean session
-		SetOnConnectHandler(func(client mqtt.Client) {
-			token := client.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
-				data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
-			})
-			if token.Wait() && token.Error() != nil {
-				logger.Error("MQTT subscription failed - " + token.Error().Error())
-			}
-		}))
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
 
 	if token := subClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
@@ -148,6 +142,13 @@ func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer subClient.Disconnect(100)
+
+	token := subClient.Subscribe(mount.Name+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+		data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
+	})
+	if token.Wait() && token.Error() != nil {
+		logger.Error("MQTT subscription failed - " + token.Error().Error())
+	}
 
 	logger.Info("client connected")
 	w.(http.Flusher).Flush() // Return 200
@@ -178,7 +179,9 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 
 	// Create MQTT client connection on behalf of HTTP user
 	pubClient := mqtt.NewClient(mqtt.NewClientOptions().
-		AddBroker(gateway.Broker))
+		AddBroker(gateway.Broker).
+		SetClientID(r.Context().Value("uuid").(string)).
+		SetCleanSession(false))
 
 	if token := pubClient.Connect(); token.Wait() && token.Error() != nil {
 		logger.Error("failed to create MQTT client - " + token.Error().Error())
