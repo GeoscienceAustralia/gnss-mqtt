@@ -22,11 +22,13 @@ func main() {
 		})
 
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, mqttmsg mqtt.Message) {
-		msg := rtcm3.DeserializeMessage(mqttmsg.Payload()) // DeserializeMessage should return error
+		msg := rtcm3.DeserializeMessage(mqttmsg.Payload()) // DeserializeMessage should be able to return error
+		log := fmt.Sprintf("%v %v %v %v", time.Now().Format("2006-01-02T15:04:05.999999"), mqttmsg.Topic(), msg.Number(), len(mqttmsg.Payload()))
+
 		if obs, ok := msg.(rtcm3.Observable); ok {
-			fmt.Println(time.Now().Format("2006-01-02T15:04:05.999999"), mqttmsg.Topic(), obs.Number(), len(mqttmsg.Payload()), time.Now().UTC().Sub(obs.Time()))
+			fmt.Println(log, time.Now().UTC().Sub(obs.Time()))
 		} else {
-			fmt.Println(time.Now().Format("2006-01-02T15:04:05.999999"), mqttmsg.Topic(), msg.Number(), len(mqttmsg.Payload()))
+			fmt.Println(log)
 		}
 	})
 
