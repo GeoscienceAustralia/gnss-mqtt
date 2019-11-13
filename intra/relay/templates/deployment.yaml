@@ -1,0 +1,26 @@
+{{ range $i, $stream := .Values.streams }}
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relay-{{ $stream }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: relay-{{ $stream }}
+  template:
+    metadata:
+      labels:
+        app: relay-{{ $stream }}
+    spec:
+      containers:
+      - name: relay
+        image: paulbouwer/hello-kubernetes:1.5
+        ports:
+        - containerPort: 8080
+        env:
+          - name: MESSAGE
+            value: {{ $stream }}
+{{ end }}
