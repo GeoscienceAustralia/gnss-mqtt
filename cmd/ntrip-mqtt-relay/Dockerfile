@@ -1,5 +1,5 @@
 # ntrip-mqtt-relay - build from project root
-FROM golang:1.12 AS builder
+FROM golang:1.13 AS builder
 
 WORKDIR /
 # Download module dependencies first so they are cached

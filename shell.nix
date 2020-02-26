@@ -10,7 +10,7 @@ let
     google-cloud-sdk
     kubectl
     mosquitto
-    go_1_12
+    go_1_13
     erlang
     rebar3
     elixir
