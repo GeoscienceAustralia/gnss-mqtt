@@ -70,6 +70,9 @@ spec:
           value: "on"
         - name: DOCKER_VERNEMQ_ALLOW_UNSUBSCRIBE_DURING_NETSPLIT
           value: "on"
+        - name: DOCKER_VERNEMQ_ACCEPT_EULA
+          value: "yes"
+
 ---
 apiVersion: v1
 kind: Service
@@ -103,10 +106,6 @@ spec:
   ports:
   - port: 1883
     name: mqttlb
-  - protocol: TCP
-    port: 443
-    targetPort: 1883
-    name: mqttlbssl
   - port: 80
     targetPort: 8888
     name: console

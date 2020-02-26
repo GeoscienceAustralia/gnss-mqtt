@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,7 +17,8 @@ spec:
     spec:
       containers:
       - name: nmg
-        image: geoscienceaustralia/ntrip-mqtt-gateway:dynamic6
+        image: geoscienceaustralia/ntrip-mqtt-gateway:0.2
+        args: ["-mqtt-broker", "tcp://vernemq:1883"]
         ports:
         - containerPort: 2101
 ---
