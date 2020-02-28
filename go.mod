@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.6.2
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/umeat/go-ntrip v0.0.0-20191003021134-305aefe538ca
 )

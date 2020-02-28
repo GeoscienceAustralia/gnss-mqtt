@@ -3,24 +3,32 @@ package main
 import (
 	"flag"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 func main() {
-	port := flag.String("ntrip-port", "2101", "")
-	broker := flag.String("mqtt-broker", "tcp://localhost:1883", "")
-	flag.Parse()
-
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.DebugLevel)
 
-	// TODO: Define from config file
-	gateway, err := NewGateway(*port, *broker)
+	configFile := flag.String("config", "caster.json", "Path to config file")
+	flag.Parse()
+
+	gateway := Gateway{}
+
+	viper.SetConfigFile(*configFile)
+	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	gateway.Hostname = "streams.geops.team"
-	gateway.Operator = "Geoscience Australia"
+	err = viper.Unmarshal(&gateway)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = gateway.Connect(); err != nil {
+		panic(err)
+	}
 
 	log.Fatal(gateway.Serve())
 }

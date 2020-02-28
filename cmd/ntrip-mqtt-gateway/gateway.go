@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -26,43 +25,39 @@ type Gateway struct {
 	//	Fallback   string
 	//	FallbackIP string
 	//	Misc       string
+	// TODO: Should the string in the map be a pointer to the Mount.Name?
 	Mounts     map[string]*Mount
 	Broker     string
 	MQTTClient mqtt.Client
 }
 
-// NewGateway constructs a gateway object, adding a MQTT client
-func NewGateway(port, broker string) (gateway *Gateway, err error) {
-	mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
-		AddBroker(broker).
+func (gateway Gateway) Connect() (err error) {
+	gateway.MQTTClient = mqtt.NewClient(mqtt.NewClientOptions().
+		AddBroker(gateway.Broker).
 		SetClientID(uuid.New().String()).
 		SetMaxReconnectInterval(5 * time.Second).
 		SetCleanSession(false))
 
-	if connToken := mqttClient.Connect(); connToken.Wait() && connToken.Error() != nil {
-		return gateway, connToken.Error()
+	if connToken := gateway.MQTTClient.Connect(); connToken.Wait() && connToken.Error() != nil {
+		return connToken.Error()
 	}
 
-	gateway = &Gateway{
-		Port:       port,
-		Mounts:     map[string]*Mount{},
-		Broker:     broker,
-		MQTTClient: mqttClient,
-	}
+	// Assumes topic structure of "<mount_name>/<message_number>"
+	// TODO: Should these subscriptions happen in goroutines with retries?
+	// Could use SubscribeMultiple
+	for _, mount := range gateway.Mounts {
+		closureMount := mount
+		subToken := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+			// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
+			closureMount.LastMessage = time.Now()
+		})
 
-	// This could probably wait until Serving - Assumes topic structure of "<mount_name>/<message_number>"
-	subToken := gateway.MQTTClient.Subscribe("#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-		name := strings.Split(msg.Topic(), "/")[0]
-		// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
-		if mount, exists := gateway.Mounts[name]; exists {
-			mount.LastMessage = time.Now()
-		} else {
-			gateway.Mounts[name] = &Mount{Name: name, LastMessage: time.Now()}
+		if subToken.Wait(); subToken.Error() != nil {
+			log.Error("Failed to subscribe to " + mount.Name + ": " + subToken.Error().Error())
 		}
-	})
-	subToken.Wait()
+	}
 
-	return gateway, subToken.Error()
+	return nil
 }
 
 // String representation of Gateway in NTRIP Sourcetable entry format
