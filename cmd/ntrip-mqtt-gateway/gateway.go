@@ -25,7 +25,7 @@ type Gateway struct {
 	//	Fallback   string
 	//	FallbackIP string
 	//	Misc       string
-	// TODO: Should the string in the map be a pointer to the Mount.Name?
+	// TODO: Should the string in the map be a pointer to the Mount.Name? Probably couldn't use Viper to construct this object directly in that case
 	Mounts     map[string]*Mount
 	Broker     string
 	MQTTClient mqtt.Client
