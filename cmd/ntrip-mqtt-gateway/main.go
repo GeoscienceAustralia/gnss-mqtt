@@ -6,6 +6,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Currently using Viper to parse the config file directly into a Gateway object.
+// Could instead have an intermediary Config object for more flexibility in adding
+// config items. For example, might be nice to optionally specify the topic of a
+// mount (currently it assumes "MOUNT/#"). Might also be nice to specify the source
+// broker for a mount as well as the topic (like a relay) - furthermore this could
+// use a prefix to define the protocol for relaying mqtt:// or ntrip://
+
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.DebugLevel)
@@ -14,13 +21,6 @@ func main() {
 	flag.Parse()
 
 	gateway := Gateway{}
-
-	// Currently using Viper to parse the config file directly into a Gateway object.
-	// Could instead have an intermediary Config object for more flexibility in adding
-	// config items. For example, might be nice to optionally specify the topic of a
-	// mount (currently it assumes "MOUNT/#"). Might also be nice to specify the source
-	// broker for a mount as well as the topic (like a relay) - furthermore this could
-	// use a prefix to define the protocol for relaying mqtt:// or ntrip://
 
 	viper.SetConfigFile(*configFile)
 	err := viper.ReadInConfig()
