@@ -6,7 +6,7 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-gnss/rtcm/rtcm3"
-	"github.com/umeat/go-ntrip/ntrip"
+	"github.com/go-gnss/ntrip"
 	"io/ioutil"
 	"time"
 )
