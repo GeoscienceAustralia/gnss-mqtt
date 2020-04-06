@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/geoscienceaustralia/go-rtcm/rtcm3"
-	"github.com/umeat/go-ntrip/ntrip"
+	"github.com/go-gnss/rtcm/rtcm3"
+	"github.com/go-gnss/ntrip"
 	"io/ioutil"
 	"time"
 )
