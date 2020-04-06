@@ -20,7 +20,9 @@ func main() {
 	configFile := flag.String("config", "caster.json", "Path to config file")
 	flag.Parse()
 
-	gateway := Gateway{}
+	gateway := Gateway{
+		Mounts: map[string]*Mount{},
+	}
 
 	viper.SetConfigFile(*configFile)
 	err := viper.ReadInConfig()
@@ -33,8 +35,6 @@ func main() {
 		panic(err)
 	}
 
-	gateway.Mounts = map[string]*Mount{}
-	log.Info(gateway)
 	if err = gateway.ConnectToBroker(); err != nil {
 		panic(err)
 	}

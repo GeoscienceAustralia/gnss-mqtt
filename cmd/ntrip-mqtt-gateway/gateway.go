@@ -31,8 +31,6 @@ type Gateway struct {
 	// Could just use a list of Mount objects instead
 	Mounts       map[string]*Mount
 	MQTTBroker   string
-	MQTTUsername string
-	MQTTPassword string
 	MQTTClient   mqtt.Client
 }
 
@@ -43,8 +41,6 @@ func (gateway Gateway) ConnectToBroker() (err error) {
 	gateway.MQTTClient = mqtt.NewClient(mqtt.NewClientOptions().
 		AddBroker(gateway.MQTTBroker).
 		SetClientID(uuid.New().String()).
-		SetUsername(gateway.MQTTUsername).
-		SetPassword(gateway.MQTTPassword).
 		SetMaxReconnectInterval(5 * time.Second).
 		SetCleanSession(false))
 
@@ -123,20 +119,20 @@ func (gateway *Gateway) AuthenticatorMiddleware(next http.Handler) http.Handler 
 			return
 		}
 
-		// Get basic auth
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			logger.Info("no auth provided")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+		// TODO: Get basic auth
+		//username, password, ok := r.BasicAuth()
+		//if !ok {
+		//	logger.Info("no auth provided")
+		//	w.WriteHeader(http.StatusUnauthorized)
+		//	return
+		//}
 
 		// Create MQTT client connection on behalf of HTTP user
 		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
 			AddBroker(gateway.MQTTBroker).
 			SetClientID(r.Context().Value("uuid").(string)).
-			SetUsername(username).
-			SetPassword(password).
+			//SetUsername(username).
+			//SetPassword(password).
 			SetCleanSession(false))
 
 		if token := mqttClient.Connect(); token.Wait() && token.Error() != nil {
