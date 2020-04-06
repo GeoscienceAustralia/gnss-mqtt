@@ -1,14 +1,6 @@
 {
-	"Broker": "tcp://stream.geops.team:1883",
+	"MQTTBroker": "tcp://stream.geops.team:1883",
 	"Port": "2101",
 	"Operator": "Geoscience Australia",	
-	"Country": "AUS",
-	"Mounts": {
-		"TEST00AUS0": {
-			"Name": "TEST00AUS0"
-		},
-		"GAT00AUS0": {
-			"Name": "GAT000AUS0"
-		}
-	}
+	"Country": "AUS"
 }

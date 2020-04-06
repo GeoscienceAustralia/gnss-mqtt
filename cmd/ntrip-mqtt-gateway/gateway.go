@@ -30,16 +30,18 @@ type Gateway struct {
 	// TODO: Should the string in the map be a pointer to the Mount.Name? Probably couldn't use Viper to construct this object directly in that case
 	// Could just use a list of Mount objects instead
 	Mounts       map[string]*Mount
-	Broker       string
+	MQTTBroker   string
 	MQTTUsername string
 	MQTTPassword string
 	MQTTClient   mqtt.Client
 }
 
-// Connect as a client to all Mounts in gateway.Mounts to populate
-func (gateway Gateway) Connect() (err error) {
+// ConnectToBroker as a client and subscribe to all RTCM3 topics - This is used
+// to populate Mount.LastMessage, which is used for the Sourcetable and the gives
+// ability to serve 404's
+func (gateway Gateway) ConnectToBroker() (err error) {
 	gateway.MQTTClient = mqtt.NewClient(mqtt.NewClientOptions().
-		AddBroker(gateway.Broker).
+		AddBroker(gateway.MQTTBroker).
 		SetClientID(uuid.New().String()).
 		SetUsername(gateway.MQTTUsername).
 		SetPassword(gateway.MQTTPassword).
@@ -50,20 +52,22 @@ func (gateway Gateway) Connect() (err error) {
 		return connToken.Error()
 	}
 
-	// Assumes topic structure of "<mount_name>/<message_number>"
-	// TODO: Should these subscriptions happen in goroutines with retries? Could use SubscribeMultiple.
-	for _, mount := range gateway.Mounts {
-		closureMount := mount
-		subToken := gateway.MQTTClient.Subscribe(mount.Name+"/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
-			// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
+	subToken := gateway.MQTTClient.Subscribe("+/rtcm3/#", 1, func(_ mqtt.Client, msg mqtt.Message) {
+		mountName := strings.Split(msg.Topic(), "/")[0]
+		// It's possible for this to cause data races on write, should add a RWMutex for access to Mounts
+		if closureMount, ok := gateway.Mounts[mountName]; ok {
 			closureMount.LastMessage = time.Now()
-		})
-
-		if subToken.Wait(); subToken.Error() != nil {
-			log.Error("failed to subscribe to " + mount.Name + ": " + subToken.Error().Error())
+		} else {
+			mount := Mount{Name: mountName, LastMessage: time.Now()}
+			gateway.Mounts[mountName] = &mount
 		}
+	})
+
+	if subToken.Wait(); subToken.Error() != nil {
+		log.Error("failed to subscribe to RTCM3 Topics " + subToken.Error().Error())
 	}
 
+	log.Info("connected to MQTT Broker")
 	return nil
 }
 
@@ -90,18 +94,6 @@ func (gateway *Gateway) Serve() error {
 	return http.ListenAndServe(":"+gateway.Port, httpMux)
 }
 
-// GetSourcetable serves gateway and mount information in NTRIP Sourcetable format
-func (gateway *Gateway) GetSourcetable(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s\r\n", gateway)
-	for _, mount := range gateway.Mounts {
-		//TODO: Make timeout configurable and make the following if statement a method of Mount
-		if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
-			fmt.Fprintf(w, "%s\r\n", mount)
-		}
-	}
-	w.(http.Flusher).Flush()
-}
-
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := uuid.New().String()
@@ -125,14 +117,10 @@ func (gateway *Gateway) AuthenticatorMiddleware(next http.Handler) http.Handler 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := r.Context().Value("logger").(*log.Entry)
 
-		// Check if mountpoint "exists" for GET requests before authenticating
-		if r.Method == "GET" {
-			mount, exists := gateway.Mounts[strings.ToLower(r.URL.Path[1:])]
-			if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
-				logger.Info("no existing mountpoint")
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
+		// Skip Authentication for Sourcetable access
+		if r.URL.Path == "/" {
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		// Get basic auth
@@ -145,7 +133,7 @@ func (gateway *Gateway) AuthenticatorMiddleware(next http.Handler) http.Handler 
 
 		// Create MQTT client connection on behalf of HTTP user
 		mqttClient := mqtt.NewClient(mqtt.NewClientOptions().
-			AddBroker(gateway.Broker).
+			AddBroker(gateway.MQTTBroker).
 			SetClientID(r.Context().Value("uuid").(string)).
 			SetUsername(username).
 			SetPassword(password).
@@ -166,15 +154,38 @@ func (gateway *Gateway) AuthenticatorMiddleware(next http.Handler) http.Handler 
 	})
 }
 
+// GetSourcetable serves gateway and mount information in NTRIP Sourcetable format
+func (gateway *Gateway) GetSourcetable(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s\r\n", gateway)
+	for _, mount := range gateway.Mounts {
+		//TODO: Make timeout configurable and make the following if statement a method of Mount
+		if mount.LastMessage.After(time.Now().Add(-time.Second * 3)) {
+			fmt.Fprintf(w, "%s\r\n", mount)
+		}
+	}
+	w.(http.Flusher).Flush()
+}
+
 // GetMount handles GET requests for Mounts, establishing an MQTT client and
 // subscription for each request and streaming the data back to the client
 func (gateway *Gateway) GetMount(w http.ResponseWriter, r *http.Request) {
 	logger := r.Context().Value("logger").(*log.Entry)
 	subClient := r.Context().Value("mqttclient").(mqtt.Client)
 
+	// TODO: Consider moving this check to the AuthenticatorMiddleware, as it does
+	// not hide information because the sourcetable is a public list of available
+	// endpoints - saves making a connection to the broker. Could potentially use the
+	// same check in the case of PostMount as well.
+	mount, exists := gateway.Mounts[strings.ToLower(r.URL.Path[1:])]
+	if !exists || mount.LastMessage.Before(time.Now().Add(-time.Second*3)) {
+		logger.Info("no existing mountpoint")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	//defer subClient.Disconnect(100)
 	data := make(chan []byte)
-	token := subClient.Subscribe(r.URL.Path[1:]+"/#", 1, func(client mqtt.Client, msg mqtt.Message) {
+	token := subClient.Subscribe(r.URL.Path[1:]+"/rtcm3/#", 1, func(client mqtt.Client, msg mqtt.Message) {
 		data <- rtcm3.EncapsulateByteArray(msg.Payload()).Serialize()
 	})
 	if token.Wait() && token.Error() != nil {
@@ -218,7 +229,7 @@ func (gateway *Gateway) PostMount(w http.ResponseWriter, r *http.Request) {
 	scanner := rtcm3.NewScanner(r.Body)
 	rtcmFrame, err := scanner.NextFrame()
 	for ; err == nil; rtcmFrame, err = scanner.NextFrame() {
-		pubClient.Publish(fmt.Sprintf("%s/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
+		pubClient.Publish(fmt.Sprintf("%s/rtcm3/%d", r.URL.Path[1:], rtcmFrame.MessageNumber()), 1, false, rtcmFrame.Payload)
 	}
 	log.Error("stream ended - " + err.Error())
 }

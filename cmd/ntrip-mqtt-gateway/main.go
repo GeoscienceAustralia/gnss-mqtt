@@ -33,7 +33,9 @@ func main() {
 		panic(err)
 	}
 
-	if err = gateway.Connect(); err != nil {
+	gateway.Mounts = map[string]*Mount{}
+	log.Info(gateway)
+	if err = gateway.ConnectToBroker(); err != nil {
 		panic(err)
 	}
 
