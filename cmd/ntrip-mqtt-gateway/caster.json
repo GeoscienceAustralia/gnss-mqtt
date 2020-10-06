@@ -1,6 +1,0 @@
-{
-	"MQTTBroker": "tcp://stream.geops.team:1883",
-	"Port": "2101",
-	"Operator": "Geoscience Australia",	
-	"Country": "AUS"
-}
